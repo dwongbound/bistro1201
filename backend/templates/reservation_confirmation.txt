@@ -1,0 +1,7 @@
+Your reservation at 1201 Bistro is confirmed.
+
+Date: {{date}}
+Time: {{time}}
+Name: {{name}}
+
+We look forward to hosting you.

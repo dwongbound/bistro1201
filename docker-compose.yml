@@ -1,0 +1,83 @@
+services:
+  postgres:
+    image: postgres:17
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bistro1201}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-bistro1201}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  frontend:
+    build: ./frontend
+    command: npm run dev
+    ports:
+      - "${FRONTEND_HOST_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    environment:
+      NODE_ENV: ${FRONTEND_NODE_ENV:-development}
+      APP_INSTANCE: ${APP_INSTANCE:-dev}
+      APP_API_BASE_PATH: ${APP_API_BASE_PATH:-/api}
+      DEV_API_PROXY_TARGET: ${DEV_API_PROXY_TARGET:-http://backend:3000}
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_HOST_PORT:-3000}:3000"
+    volumes:
+      - ./backend:/app
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@postgres:5432/bistro1201}
+      PORT: ${PORT:-3000}
+      GUEST_ACCESS_CODE: ${GUEST_ACCESS_CODE:-bistro1201}
+      GUEST_ACCESS_CODE_EXPIRES_AT: ${GUEST_ACCESS_CODE_EXPIRES_AT:-}
+      STAFF_ACCESS_CODE: ${STAFF_ACCESS_CODE:-service1201}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-}
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx.Dockerfile
+      args:
+        APP_INSTANCE: ${APP_INSTANCE:-dev}
+        APP_API_BASE_PATH: ${APP_API_BASE_PATH:-/api}
+    ports:
+      - "${NGINX_HOST_PORT:-80}:80"
+    depends_on:
+      - backend
+
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.58.2-jammy
+    profiles:
+      - test
+    working_dir: /work/frontend
+    depends_on:
+      - nginx
+    environment:
+      CI: 1
+      BASE_URL: ${E2E_BASE_URL:-http://nginx}
+    volumes:
+      - ./frontend:/work/frontend
+
+volumes:
+  frontend_node_modules:
+  postgres_data:

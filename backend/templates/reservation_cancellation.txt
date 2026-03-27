@@ -1,0 +1,7 @@
+Your reservation at 1201 Bistro has been cancelled.
+
+Date: {{date}}
+Time: {{time}}
+Name: {{name}}
+
+If you have any questions, please reply to this email.

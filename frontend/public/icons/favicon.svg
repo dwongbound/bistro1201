@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#18120f" />
+  <text
+    x="17"
+    y="29"
+    fill="#d9c3a1"
+    font-family="'Palatino Linotype', 'Book Antiqua', Georgia, serif"
+    font-size="40"
+    font-weight="700"
+    text-anchor="middle"
+  >
+    1
+  </text>
+  <text
+    x="47"
+    y="29"
+    fill="#d9c3a1"
+    font-family="'Palatino Linotype', 'Book Antiqua', Georgia, serif"
+    font-size="40"
+    font-weight="700"
+    text-anchor="middle"
+  >
+    2
+  </text>
+  <text
+    x="17"
+    y="55"
+    fill="#b07a44"
+    font-family="'Palatino Linotype', 'Book Antiqua', Georgia, serif"
+    font-size="40"
+    font-weight="700"
+    text-anchor="middle"
+    transform="rotate(28 17 49)"
+  >
+    0
+  </text>
+  <text
+    x="47"
+    y="55"
+    fill="#d9c3a1"
+    font-family="'Palatino Linotype', 'Book Antiqua', Georgia, serif"
+    font-size="40"
+    font-weight="700"
+    text-anchor="middle"
+  >
+    1
+  </text>
+</svg>
