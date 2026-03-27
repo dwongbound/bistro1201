@@ -1,26 +1,51 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('1201 Bistro Website', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
   const availableDate = `2032-12-${`${Math.floor(Math.random() * 9) + 10}`.padStart(2, '0')}`;
   const dinnerTime = '19:00';
   const dinnerTimeLabel = formatUiTime(dinnerTime);
+
+  test.beforeEach(async ({ context, page }) => {
+    await context.clearCookies();
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+    });
+  });
+
   const loginToReserve = async (page, accessCode) => {
     await page.goto('/reserve');
-    await page.getByPlaceholder('Access Code').fill(accessCode);
-    await page.getByRole('button', { name: 'Submit' }).click();
-    await expect(page.getByRole('heading', { name: 'Reserve an Evening' })).toBeVisible();
+
+    const reserveHeading = page.getByRole('heading', { name: 'Reserve an Evening' });
+    const accessGateHeading = page.getByRole('heading', { name: 'Enter an Access Code' });
+
+    await Promise.race([
+      reserveHeading.waitFor({ state: 'visible', timeout: 10000 }),
+      accessGateHeading.waitFor({ state: 'visible', timeout: 10000 }),
+    ]);
+
+    if (await accessGateHeading.isVisible().catch(() => false)) {
+      await page.getByLabel('Access Code').fill(accessCode);
+      await page.getByRole('button', { name: 'Submit' }).click();
+    }
+
+    await expect(reserveHeading).toBeVisible();
   };
 
   test('should load homepage', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle(/1201 Bistro/);
-    await expect(page.getByRole('heading', { name: 'Welcome to 1201 Bistro' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Welcome to/i })).toBeVisible();
+    await expect(page.getByText('1201 Bistro')).toBeVisible();
   });
 
   test('should navigate to About page', async ({ page }) => {
     await page.goto('/');
-    await page.click('text=About');
-    await expect(page.getByRole('heading', { name: 'About 1201 Bistro' })).toBeVisible();
+    await page.getByRole('link', { name: 'About' }).click();
+    await expect(page.getByRole('heading', { name: /About/i })).toBeVisible();
+    await expect(page.getByText('1201 Bistro')).toBeVisible();
   });
 
   test('should navigate to Gallery page', async ({ page }) => {

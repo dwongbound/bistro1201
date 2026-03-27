@@ -17,10 +17,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -30,7 +30,19 @@ jobs:
         run: npm ci
 
       - name: Run frontend unit tests
-        run: npm test -- --runInBand
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p ../artifacts
+          npm test -- --runInBand 2>&1 | tee ../artifacts/frontend-jest.txt
+
+      - name: Upload frontend test artifact
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: frontend-jest-report
+          path: artifacts/frontend-jest.txt
+          if-no-files-found: error
 
   backend-tests:
     name: Backend Cargo Test
@@ -59,7 +71,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -70,7 +82,19 @@ jobs:
           workspaces: backend
 
       - name: Run backend unit tests
-        run: cargo test
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p ../artifacts
+          cargo test 2>&1 | tee ../artifacts/backend-cargo-test.txt
+
+      - name: Upload backend test artifact
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: backend-cargo-test-report
+          path: artifacts/backend-cargo-test.txt
+          if-no-files-found: error
 
   e2e-tests:
     name: Playwright E2E
@@ -81,12 +105,33 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Run isolated Playwright suite
+        shell: bash
         run: |
+          set -o pipefail
+          mkdir -p artifacts
           docker compose --env-file env/test.env --profile test run --rm e2e sh -lc \
-            "npm ci && npx playwright test --reporter=line"
+            "npm ci && npx playwright test --reporter=line,html" 2>&1 | tee artifacts/playwright-e2e.txt
+
+      - name: Upload Playwright log artifact
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-e2e-log
+          path: artifacts/playwright-e2e.txt
+          if-no-files-found: error
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-html-report
+          path: |
+            frontend/playwright-report
+            frontend/playwright-artifacts
+          if-no-files-found: warn
 
       - name: Tear down isolated E2E stack
         if: always()
