@@ -1,9 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { formatDateKey, formatHumanDate } from '../../src/pages/reserve/reserve';
 
 test.describe('1201 Bistro Website', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
-
-  const availableDate = `2032-12-${`${Math.floor(Math.random() * 9) + 10}`.padStart(2, '0')}`;
   const dinnerTime = '19:00';
   const dinnerTimeLabel = formatUiTime(dinnerTime);
 
@@ -20,15 +19,26 @@ test.describe('1201 Bistro Website', () => {
 
     const reserveHeading = page.getByRole('heading', { name: 'Reserve an Evening' });
     const accessGateHeading = page.getByRole('heading', { name: 'Enter an Access Code' });
+    const signOutButton = page.getByRole('button', { name: 'Sign Out' });
 
     await Promise.race([
       reserveHeading.waitFor({ state: 'visible', timeout: 10000 }),
       accessGateHeading.waitFor({ state: 'visible', timeout: 10000 }),
     ]);
 
+    if (await signOutButton.isVisible().catch(() => false)) {
+      await signOutButton.click();
+      await expect(accessGateHeading).toBeVisible();
+    }
+
     if (await accessGateHeading.isVisible().catch(() => false)) {
       await page.getByLabel('Access Code').fill(accessCode);
-      await page.getByRole('button', { name: 'Submit' }).click();
+      const submitButton = page.getByRole('button', { name: 'Submit' });
+      await expect(submitButton).toBeEnabled();
+      await Promise.all([
+        reserveHeading.waitFor({ state: 'visible', timeout: 10000 }),
+        submitButton.click(),
+      ]);
     }
 
     await expect(reserveHeading).toBeVisible();
@@ -37,15 +47,17 @@ test.describe('1201 Bistro Website', () => {
   test('should load homepage', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle(/1201 Bistro/);
-    await expect(page.getByRole('heading', { name: /Welcome to/i })).toBeVisible();
-    await expect(page.getByText('1201 Bistro')).toBeVisible();
+    const heroHeading = page.getByRole('heading', { name: /Welcome to/i });
+    await expect(heroHeading).toBeVisible();
+    await expect(heroHeading).toContainText(/1201/i);
   });
 
   test('should navigate to About page', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('link', { name: 'About' }).click();
-    await expect(page.getByRole('heading', { name: /About/i })).toBeVisible();
-    await expect(page.getByText('1201 Bistro')).toBeVisible();
+    await navigateToPrimaryRoute(page, 'About');
+    const aboutHeading = page.getByRole('heading', { name: /About/i });
+    await expect(aboutHeading).toBeVisible();
+    await expect(aboutHeading).toContainText(/1201/i);
   });
 
   test('should navigate to Gallery page', async ({ page }) => {
@@ -57,14 +69,15 @@ test.describe('1201 Bistro Website', () => {
   test('should open the Swagger API docs page', async ({ page }) => {
     await page.goto('/');
     await page.goto('/api/docs/');
-    await expect(page.getByText('Swagger UI')).toBeVisible();
-    await expect(page.getByText('/api/auth/login')).toBeVisible();
-    await expect(page.getByText('/api/gallery')).toBeVisible();
+    await expect(page).toHaveTitle(/Swagger UI/);
+    await expect(page.locator('#swagger-ui')).toBeVisible();
+    await expect(page.locator('#swagger-ui')).toContainText('/api/auth/login');
+    await expect(page.locator('#swagger-ui')).toContainText('/api/gallery');
   });
 
   test('should access reserve page and unlock staff controls', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('banner').getByRole('link', { name: 'Reserve' }).click();
+    await navigateToPrimaryRoute(page, 'Reserve');
 
     await expect(page.getByRole('heading', { name: 'Enter an Access Code' })).toBeVisible();
 
@@ -366,7 +379,7 @@ test.describe('1201 Bistro Website', () => {
     const targetDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3);
     const targetDay = targetDate.getDate().toString();
 
-    await page.getByRole('button', { name: formatCalendarLabel(targetDate) }).click();
+    await selectCalendarDate(page, targetDate);
     await expect(page.locator('input[name="date"]')).toHaveValue(formatIsoDate(targetDate));
 
     await page.getByRole('button', { name: 'Add Slot' }).click();
@@ -383,18 +396,18 @@ test.describe('1201 Bistro Website', () => {
     ]);
 
     await expect(page.getByText('These are the dinner slots currently open for this date.')).toBeVisible();
-    await expect(page.getByText(dinnerTimeLabel)).toBeVisible();
+    await expect(page.getByRole('button', { name: dinnerTimeLabel })).toBeVisible();
 
     await page.getByRole('link', { name: 'About' }).click();
     await expect(page).toHaveURL(/\/about$/);
 
     await loginToReserve(page, 'service1201');
-    await page.getByRole('button', { name: formatCalendarLabel(targetDate) }).click();
+    await selectCalendarDate(page, targetDate);
 
     const targetTile = page.getByRole('button', { name: formatCalendarLabel(targetDate) });
     await expect(targetTile).toContainText(targetDay);
     await expect(page.getByText('These are the dinner slots currently open for this date.')).toBeVisible();
-    await expect(page.getByText(dinnerTimeLabel)).toBeVisible();
+    await expect(page.getByRole('button', { name: dinnerTimeLabel })).toBeVisible();
     await expect(page.locator('input[name="date"]')).toHaveValue(formatIsoDate(targetDate));
   });
 });
@@ -404,11 +417,7 @@ function formatIsoDate(date) {
 }
 
 function formatCalendarLabel(date) {
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
+  return formatHumanDate(formatDateKey(date));
 }
 
 function formatUiTime(timeValue) {
@@ -422,16 +431,45 @@ function formatUiTime(timeValue) {
   });
 }
 
+async function navigateToPrimaryRoute(page, linkName) {
+  const headerLink = page.getByRole('banner').getByRole('link', { name: linkName }).first();
+
+  if (await headerLink.isVisible().catch(() => false)) {
+    await headerLink.click();
+    return;
+  }
+
+  const menuButton = page.getByRole('button', { name: 'Open navigation menu' });
+  await expect(menuButton).toBeVisible();
+  await menuButton.click();
+  await page.getByRole('link', { name: linkName }).last().click();
+}
+
 async function selectCalendarDate(page, date) {
   const targetLabel = formatCalendarLabel(date);
-  const targetButton = page.getByRole('button', { name: targetLabel }).first();
+  const targetMonthLabel = date.toLocaleDateString(undefined, {
+    month: 'long',
+    year: 'numeric',
+  });
+  const currentMonthHeading = page.locator('h6').filter({ hasText: /^[A-Za-z]+ \d{4}$/ }).first();
 
   for (let attempt = 0; attempt < 12; attempt += 1) {
+    const targetButton = page.getByRole('button', { name: targetLabel }).first();
     if (await targetButton.count()) {
       await targetButton.click();
       return;
     }
-    await page.getByRole('button', { name: 'Next' }).click();
+
+    const currentMonthLabel = (await currentMonthHeading.textContent())?.trim() || '';
+    if (!currentMonthLabel) {
+      throw new Error('Could not determine the visible calendar month');
+    }
+
+    const currentMonthDate = new Date(`${currentMonthLabel} 1`);
+    const targetMonthDate = new Date(`${targetMonthLabel} 1`);
+    const shouldMoveForward = currentMonthDate < targetMonthDate;
+
+    await page.getByRole('button', { name: shouldMoveForward ? 'Next' : 'Previous' }).click();
   }
 
   throw new Error(`Could not find calendar date button for ${targetLabel}`);
