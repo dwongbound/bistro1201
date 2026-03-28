@@ -1,12 +1,14 @@
 name: E2E on Develop
 
 on:
-  push:
-    branches:
-      - develop
+  workflow_run:
+    workflows: ["Checks"]
+    branches: [develop]
+    types: [completed]
 
 jobs:
   e2e-tests:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Playwright E2E (${{ matrix.project_name }})
     runs-on: ubuntu-latest
     strategy:
