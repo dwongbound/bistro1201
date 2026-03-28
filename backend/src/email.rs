@@ -1,7 +1,7 @@
 use crate::error::ApiError;
 use crate::models::Reservation;
 use crate::state::AppState;
-use lettre::message::Mailbox;
+use lettre::message::{Mailbox, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 use std::env;
@@ -48,14 +48,17 @@ pub(crate) async fn send_confirmation_email(
     }
 
     let email = email_builder
-        .body(build_confirmation_email_body(&email_config.confirmation_template, reservation))
+        .singlepart(SinglePart::html(build_confirmation_email_body(&email_config.confirmation_template, reservation)))
         .map_err(|_| ApiError::internal("Unable to create the confirmation email"))?;
 
     email_config
         .mailer
         .send(email)
         .await
-        .map_err(|_| ApiError::internal("Reservation saved, but the confirmation email could not be sent"))?;
+        .map_err(|error| {
+            tracing::error!(?error, "SMTP send failed for confirmation email");
+            ApiError::internal("Reservation saved, but the confirmation email could not be sent")
+        })?;
 
     Ok(true)
 }
@@ -87,20 +90,23 @@ pub(crate) async fn send_cancellation_email(
     }
 
     let email = email_builder
-        .body(build_cancellation_email_body(&email_config.cancellation_template, reservation))
+        .singlepart(SinglePart::html(build_cancellation_email_body(&email_config.cancellation_template, reservation)))
         .map_err(|_| ApiError::internal("Unable to create the cancellation email"))?;
 
     email_config
         .mailer
         .send(email)
         .await
-        .map_err(|_| ApiError::internal("Reservation released, but the cancellation email could not be sent"))?;
+        .map_err(|error| {
+            tracing::error!(?error, "SMTP send failed for cancellation email");
+            ApiError::internal("Reservation released, but the cancellation email could not be sent")
+        })?;
 
     Ok(true)
 }
 
 /// Builds the plain-text confirmation email body from the configured template file.
-fn build_confirmation_email_body(template: &str, reservation: &Reservation) -> String {
+pub(crate) fn build_confirmation_email_body(template: &str, reservation: &Reservation) -> String {
     template
         .replace("{{date}}", &reservation.date)
         .replace("{{time}}", &reservation.time)
@@ -108,7 +114,7 @@ fn build_confirmation_email_body(template: &str, reservation: &Reservation) -> S
 }
 
 /// Builds the plain-text cancellation email body from the configured template file.
-fn build_cancellation_email_body(template: &str, reservation: &Reservation) -> String {
+pub(crate) fn build_cancellation_email_body(template: &str, reservation: &Reservation) -> String {
     template
         .replace("{{date}}", &reservation.date)
         .replace("{{time}}", &reservation.time)
@@ -202,4 +208,50 @@ pub(crate) fn load_email_config() -> std::result::Result<Option<EmailConfig>, Ap
         confirmation_template,
         cancellation_template,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_reservation() -> Reservation {
+        Reservation {
+            id: None,
+            date: "2026-12-25".to_string(),
+            time: "19:00".to_string(),
+            name: "Jane Doe".to_string(),
+            email: Some("jane@example.com".to_string()),
+        }
+    }
+
+    #[test]
+    fn test_confirmation_body_substitutes_all_fields() {
+        let template = "Hi {{name}}, your reservation on {{date}} at {{time}} is confirmed.";
+        let body = build_confirmation_email_body(template, &test_reservation());
+        assert_eq!(body, "Hi Jane Doe, your reservation on 2026-12-25 at 19:00 is confirmed.");
+    }
+
+    #[test]
+    fn test_cancellation_body_substitutes_all_fields() {
+        let template = "Hi {{name}}, your reservation on {{date}} at {{time}} has been cancelled.";
+        let body = build_cancellation_email_body(template, &test_reservation());
+        assert_eq!(body, "Hi Jane Doe, your reservation on 2026-12-25 at 19:00 has been cancelled.");
+    }
+
+    #[test]
+    fn test_confirmation_body_leaves_unknown_placeholders_untouched() {
+        let template = "Hi {{name}}, see you {{unknown}}.";
+        let body = build_confirmation_email_body(template, &test_reservation());
+        assert_eq!(body, "Hi Jane Doe, see you {{unknown}}.");
+    }
+
+    #[test]
+    fn test_load_email_config_returns_none_without_smtp_config() {
+        // Ensure no SMTP env vars leak in from the test environment.
+        std::env::remove_var("POSTMARK_SERVER_TOKEN");
+        std::env::remove_var("SMTP_HOST");
+        let result = load_email_config();
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_none());
+    }
 }

@@ -18,3 +18,10 @@ export function getApiUrl() {
 export function getAppInstance() {
   return getAppConfig().instance || 'dev';
 }
+
+/**
+ * Returns the Cloudflare R2 public base URL, or an empty string if not configured.
+ */
+export function getR2BaseUrl() {
+  return getAppConfig().r2BaseUrl || '';
+}

@@ -21,7 +21,8 @@ use crate::db::{ensure_default_guest_access_code, init_db, load_default_guest_ac
 use crate::docs::ApiDoc;
 use crate::email::load_email_config;
 use crate::handlers::{
-    create_access_code, create_available_date, create_reservation, delete_access_code, delete_available_date,
+    create_access_code, create_available_date, create_gallery_event, create_gallery_image, create_reservation,
+    delete_access_code, delete_available_date, delete_gallery_event_handler, delete_gallery_image_handler,
     delete_reservation, get_access_codes, get_available_dates, get_gallery_event, get_gallery_events, get_reservations,
     health, login, root,
 };
@@ -33,8 +34,10 @@ fn build_app(state: AppState) -> Router {
         .merge(SwaggerUi::new("/api/docs").url("/api/openapi.json", ApiDoc::openapi()))
         .route("/", get(root))
         .route("/health", get(health))
-        .route("/api/gallery", get(get_gallery_events))
-        .route("/api/gallery/:slug", get(get_gallery_event))
+        .route("/api/gallery", get(get_gallery_events).post(create_gallery_event))
+        .route("/api/gallery/:slug", get(get_gallery_event).delete(delete_gallery_event_handler))
+        .route("/api/gallery/:slug/images", post(create_gallery_image))
+        .route("/api/gallery/:slug/images/:id", delete(delete_gallery_image_handler))
         .route("/api/auth/login", post(login))
         .route("/api/access-codes", get(get_access_codes).post(create_access_code))
         .route("/api/access-codes/:code", delete(delete_access_code))
@@ -243,6 +246,44 @@ mod tests {
         let json = String::from_utf8(body.to_vec()).unwrap();
         assert!(json.contains("\"cancellation_email_sent\":false"));
         assert!(json.contains("\"removed_reservation\""));
+        assert!(json.contains("\"Jane Doe\""));
+    }
+
+    #[sqlx::test]
+    async fn test_create_reservation_succeeds_without_email_config(pool: sqlx::PgPool) {
+        ensure_schema(&pool).await.unwrap();
+        insert_available_date(
+            &pool,
+            AvailabilityDate {
+                date: "2026-12-25".to_string(),
+                dinner_time: Some("19:00".to_string()),
+            },
+        )
+        .await
+        .unwrap();
+
+        let token = create_session(&pool, "guest").await.unwrap();
+        let app = build_app(test_state(pool));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/reservations")
+                    .header("Authorization", format!("Bearer {token}"))
+                    .header("Content-Type", "application/json")
+                    .body(Body::from(
+                        r#"{"date":"2026-12-25","time":"19:00","name":"Jane Doe","email":"jane@example.com"}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let json = String::from_utf8(body.to_vec()).unwrap();
+        assert!(json.contains("\"confirmation_email_sent\":false"));
         assert!(json.contains("\"Jane Doe\""));
     }
 }
