@@ -1,4 +1,4 @@
-name: Branch Promotion Policy
+name: Enforce Branch Promotion
 
 on:
   pull_request:

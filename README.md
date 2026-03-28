@@ -333,7 +333,8 @@ docker compose exec frontend npm test -- --runInBand
 docker compose exec backend cargo test
 
 # E2E tests against an isolated nginx/backend/postgres stack
-docker compose --env-file env/test.env --profile test run --rm e2e sh -lc "npm ci && npx playwright test"
+docker compose --env-file env/test.env --profile test run --rm e2e sh -lc \
+  "cd /work && ./scripts/run_e2e_in_docker.sh"
 ```
 
 ### Test Order
@@ -405,12 +406,13 @@ the built frontend on Cloudflare and point it at a separately hosted backend.
 
 ## GitHub Actions
 
-This repo now uses separate GitHub Actions workflows for CI and deploy:
+This repo now uses separate GitHub Actions workflows for checks, E2E, and deploy:
 
-- [.github/workflows/ci.yml](/Users/dwong/Documents/bistro1201/.github/workflows/ci.yml)
-  Runs frontend Jest, backend `cargo test`, and the isolated Playwright suite
-  on pull requests into `develop` and pushes to `develop`.
-- [.github/workflows/deploy-main.yml](/Users/dwong/Documents/bistro1201/.github/workflows/deploy-main.yml)
+- [.github/workflows/checks.yml](/Users/dwong/Documents/bistro1201/.github/workflows/checks.yml)
+  Runs frontend Jest and backend `cargo test` on pushes and pull requests.
+- [.github/workflows/e2e-on-develop.yml](/Users/dwong/Documents/bistro1201/.github/workflows/e2e-on-develop.yml)
+  Runs the isolated Playwright suite on pushes to `develop`.
+- [.github/workflows/deploy-fly-production.yml](/Users/dwong/Documents/bistro1201/.github/workflows/deploy-fly-production.yml)
   Deploys to Fly.io on pushes to `main`.
 
 ### Required GitHub Secrets

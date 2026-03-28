@@ -54,6 +54,9 @@ export default defineConfig({
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: process.env.BASE_URL || 'http://localhost:5173',
 
+    /* Save a screenshot for failed tests so the HTML report has a visual snapshot. */
+    screenshot: 'only-on-failure',
+
     /* Keep traces for real failures so debugging stays clear without retries. */
     trace: 'retain-on-failure',
   },

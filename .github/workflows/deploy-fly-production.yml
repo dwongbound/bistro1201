@@ -1,4 +1,4 @@
-name: Deploy Main to Fly.io
+name: Deploy Production to Fly.io
 
 on:
   push:

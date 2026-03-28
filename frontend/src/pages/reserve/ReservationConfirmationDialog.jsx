@@ -4,9 +4,17 @@ import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, 
 /**
  * Confirms successful reservations without leaving the reserve dashboard.
  */
-function ReservationConfirmationDialog({ confirmationDialog, onClose }) {
+function ReservationConfirmationDialog({ confirmationDialog, onClose, onExited }) {
   return (
-    <Dialog open={confirmationDialog.open} onClose={onClose}>
+    <Dialog
+      open={confirmationDialog.open}
+      onClose={onClose}
+      slotProps={{
+        transition: {
+          onExited,
+        },
+      }}
+    >
       <DialogTitle sx={{ pb: 1 }}>{confirmationDialog.title || 'Reservation Confirmed'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} alignItems="center" sx={{ pt: 1, textAlign: 'center' }}>

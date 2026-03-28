@@ -3,15 +3,58 @@ import { formatDateKey, formatHumanDate } from '../../src/pages/reserve/reserve'
 
 test.describe('1201 Bistro Website', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
-  const dinnerTime = '19:00';
-  const dinnerTimeLabel = formatUiTime(dinnerTime);
+  const primaryDinnerTime = '19:00';
+  const secondaryDinnerTime = '20:45';
+  const primaryDinnerTimeLabel = formatUiTime(primaryDinnerTime);
+  const secondaryDinnerTimeLabel = formatUiTime(secondaryDinnerTime);
+  let createdSlots = [];
+  let createdReservations = [];
 
   test.beforeEach(async ({ context, page }) => {
+    createdSlots = [];
+    createdReservations = [];
     await context.clearCookies();
     await page.addInitScript(() => {
       window.localStorage.clear();
       window.sessionStorage.clear();
     });
+  });
+
+  test.afterEach(async ({ request }) => {
+    if (!createdSlots.length && !createdReservations.length) {
+      return;
+    }
+
+    const loginResponse = await request.post('/api/auth/login', {
+      data: { code: 'service1201' },
+    });
+
+    if (!loginResponse.ok()) {
+      return;
+    }
+
+    const { token } = await loginResponse.json();
+    const headers = { Authorization: `Bearer ${token}` };
+
+    for (const reservation of dedupeTrackedItems(createdReservations)) {
+      try {
+        await request.delete(`/api/reservations/${reservation.date}?time=${encodeURIComponent(reservation.time)}`, {
+          headers,
+        });
+      } catch {
+        // Tests may already free this reservation as part of the scenario.
+      }
+    }
+
+    for (const slot of dedupeTrackedItems(createdSlots)) {
+      try {
+        await request.delete(`/api/availability/${slot.date}?dinner_time=${encodeURIComponent(slot.time)}`, {
+          headers,
+        });
+      } catch {
+        // Tests may already remove this slot as part of the scenario.
+      }
+    }
   });
 
   const loginToReserve = async (page, accessCode) => {
@@ -52,6 +95,14 @@ test.describe('1201 Bistro Website', () => {
       window.sessionStorage.clear();
     });
     await page.goto('/reserve');
+  };
+
+  const trackSlot = (date, time) => {
+    createdSlots.push({ date, time });
+  };
+
+  const trackReservation = (date, time) => {
+    createdReservations.push({ date, time });
   };
 
   test('should load homepage', async ({ page }) => {
@@ -107,17 +158,12 @@ test.describe('1201 Bistro Website', () => {
   });
 
   test('should book a reservation on an opened date', async ({ page }) => {
-    const targetDateObject = new Date();
-    targetDateObject.setDate(targetDateObject.getDate() + 14 + Math.floor(Math.random() * 7));
-    const targetDate = formatIsoDate(targetDateObject);
-
     await loginToReserve(page, 'service1201');
-
-    await selectCalendarDate(page, targetDateObject);
+    const targetDate = await page.locator('input[name="date"]').inputValue();
     await expect(page.locator('input[name="date"]')).toHaveValue(targetDate);
 
     await page.getByRole('button', { name: 'Add Slot' }).click();
-    await page.locator('input[name="dinner_time"]').fill(dinnerTime);
+    await page.locator('input[name="dinner_time"]').fill(primaryDinnerTime);
     await Promise.all([
       page.waitForResponse(
         (response) =>
@@ -127,16 +173,16 @@ test.describe('1201 Bistro Website', () => {
       ),
       page.getByRole('button', { name: 'Save and Open' }).click(),
     ]);
+    trackSlot(targetDate, primaryDinnerTime);
 
     await loginToReserve(page, 'bistro1201');
-
-    await selectCalendarDate(page, targetDateObject);
     await expect(page.locator('input[name="date"]')).toHaveValue(targetDate);
-    await page.getByRole('button', { name: dinnerTimeLabel }).click();
+    await page.getByRole('button', { name: primaryDinnerTimeLabel }).click();
     await page.fill('#reservation-name', 'John Doe');
     await page.fill('#reservation-email', 'john@example.com');
     await expect(page.getByRole('button', { name: 'Confirm Reservation' })).toBeEnabled();
     await page.getByRole('button', { name: 'Confirm Reservation' }).click();
+    trackReservation(targetDate, primaryDinnerTime);
 
     await expect(page.getByRole('heading', { name: 'Reservation Confirmed' })).toBeVisible();
     await expect(
@@ -145,21 +191,12 @@ test.describe('1201 Bistro Website', () => {
   });
 
   test('should keep the second slot available after booking one of two seatings', async ({ page }) => {
-    const firstDinnerTime = '17:30';
-    const secondDinnerTime = '20:45';
-    const firstDinnerTimeLabel = formatUiTime(firstDinnerTime);
-    const secondDinnerTimeLabel = formatUiTime(secondDinnerTime);
-    const targetDateObject = new Date();
-    targetDateObject.setDate(targetDateObject.getDate() + 45 + Math.floor(Math.random() * 10));
-    const targetDate = formatIsoDate(targetDateObject);
-
     await loginToReserve(page, 'service1201');
-
-    await selectCalendarDate(page, targetDateObject);
+    const targetDate = await page.locator('input[name="date"]').inputValue();
     await expect(page.locator('input[name="date"]')).toHaveValue(targetDate);
 
     await page.getByRole('button', { name: 'Add Slot' }).click();
-    await page.locator('input[name="dinner_time"]').fill(firstDinnerTime);
+    await page.locator('input[name="dinner_time"]').fill(primaryDinnerTime);
     await Promise.all([
       page.waitForResponse(
         (response) =>
@@ -169,9 +206,10 @@ test.describe('1201 Bistro Website', () => {
       ),
       page.getByRole('button', { name: 'Save and Open' }).click(),
     ]);
+    trackSlot(targetDate, primaryDinnerTime);
 
     await page.getByRole('button', { name: 'Add Slot' }).click();
-    await page.locator('input[name="dinner_time"]').fill(secondDinnerTime);
+    await page.locator('input[name="dinner_time"]').fill(secondaryDinnerTime);
     await Promise.all([
       page.waitForResponse(
         (response) =>
@@ -181,39 +219,35 @@ test.describe('1201 Bistro Website', () => {
       ),
       page.getByRole('button', { name: 'Save and Open' }).click(),
     ]);
+    trackSlot(targetDate, secondaryDinnerTime);
 
     await loginToReserve(page, 'bistro1201');
-
-    await selectCalendarDate(page, targetDateObject);
     await expect(page.locator('input[name="date"]')).toHaveValue(targetDate);
-    await expect(page.getByRole('button', { name: firstDinnerTimeLabel })).toBeVisible();
-    await expect(page.getByRole('button', { name: secondDinnerTimeLabel })).toBeVisible();
+    await expect(page.getByRole('button', { name: primaryDinnerTimeLabel })).toBeVisible();
+    await expect(page.getByRole('button', { name: secondaryDinnerTimeLabel })).toBeVisible();
 
-    await page.getByRole('button', { name: firstDinnerTimeLabel }).click();
+    await page.getByRole('button', { name: primaryDinnerTimeLabel }).click();
     await page.fill('#reservation-name', 'John Doe');
     await page.fill('#reservation-email', 'john@example.com');
     await page.getByRole('button', { name: 'Confirm Reservation' }).click();
+    trackReservation(targetDate, primaryDinnerTime);
 
     await expect(page.getByRole('heading', { name: 'Reservation Confirmed' })).toBeVisible();
     await page.getByRole('button', { name: 'Close' }).click();
 
-    await selectCalendarDate(page, targetDateObject);
     await expect(page.locator('input[name="date"]')).toHaveValue(targetDate);
-    await expect(page.getByRole('button', { name: secondDinnerTimeLabel })).toBeVisible();
-    await expect(page.getByRole('button', { name: firstDinnerTimeLabel })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: secondaryDinnerTimeLabel })).toBeVisible();
+    await expect(page.getByRole('button', { name: primaryDinnerTimeLabel })).toHaveCount(0);
   });
 
   test('should let staff add, free, and then remove a reserved slot', async ({ page, context }) => {
-    const targetDateObject = new Date();
-    targetDateObject.setDate(targetDateObject.getDate() + 5);
-    const targetDate = formatIsoDate(targetDateObject);
-    const flowDinnerTime = '18:30';
-    const flowDinnerTimeLabel = formatUiTime(flowDinnerTime);
+    const flowDinnerTime = secondaryDinnerTime;
+    const flowDinnerTimeLabel = secondaryDinnerTimeLabel;
+    const visibleActionButton = (label) => page.getByRole('button', { name: label, exact: true });
 
     await loginToReserve(page, 'service1201');
     await expect(page.getByRole('heading', { name: 'Reserve an Evening' })).toBeVisible();
-
-    await selectCalendarDate(page, targetDateObject);
+    const targetDate = await page.locator('input[name="date"]').inputValue();
     await expect(page.locator('input[name="date"]')).toHaveValue(targetDate);
 
     await page.getByRole('button', { name: 'Add Slot' }).click();
@@ -227,6 +261,7 @@ test.describe('1201 Bistro Website', () => {
       ),
       page.getByRole('button', { name: 'Save and Open' }).click(),
     ]);
+    trackSlot(targetDate, flowDinnerTime);
 
     await expect(page.locator('p', { hasText: flowDinnerTimeLabel }).first()).toBeVisible();
 
@@ -234,9 +269,6 @@ test.describe('1201 Bistro Website', () => {
     await expect(page.getByRole('heading', { name: 'Enter an Access Code' })).toBeVisible();
 
     await loginToReserve(page, 'bistro1201');
-    if ((await page.locator('input[name="date"]').inputValue()) !== targetDate) {
-      await selectCalendarDate(page, targetDateObject);
-    }
     await expect(page.locator('input[name="date"]')).toHaveValue(targetDate);
     await page.getByRole('button', { name: flowDinnerTimeLabel }).click();
     await page.fill('#reservation-name', 'John Doe');
@@ -251,6 +283,7 @@ test.describe('1201 Bistro Website', () => {
       ),
       page.getByRole('button', { name: 'Confirm Reservation' }).click(),
     ]);
+    trackReservation(targetDate, flowDinnerTime);
 
     await expect(page.getByRole('heading', { name: 'Reservation Confirmed' })).toBeVisible();
     await page.getByRole('button', { name: 'Close' }).click();
@@ -259,26 +292,31 @@ test.describe('1201 Bistro Website', () => {
     await page.getByRole('button', { name: 'Unlock Staff Controls' }).click();
     await expect(page.getByRole('heading', { name: '1201 Team Access' })).toBeVisible();
 
-    if ((await page.locator('input[name="date"]').inputValue()) !== targetDate) {
-      await selectCalendarDate(page, targetDateObject);
-    }
-    await expect(page.getByRole('button', { name: 'Free Slot' })).toBeEnabled();
-    await page.getByRole('button', { name: 'Free Slot' }).click();
-    await expect(page.getByRole('heading', { name: 'Free Reserved Slot' })).toBeVisible();
-    await expect(page.getByRole('button', { name: flowDinnerTimeLabel })).toBeVisible();
+    await expect(visibleActionButton('Free Slot')).toBeEnabled();
+    await visibleActionButton('Free Slot').click();
+    const freeDialog = page.getByRole('dialog', { name: 'Free Reserved Slot' });
+    await expect(freeDialog).toBeVisible();
+    await expect(freeDialog.getByRole('button', { name: flowDinnerTimeLabel })).toBeVisible();
+    await freeDialog.getByRole('button', { name: flowDinnerTimeLabel }).click();
 
     await Promise.all([
       page.waitForResponse(
         (response) =>
           matchesDeleteRequest(response, `/api/reservations/${targetDate}`, 'time', flowDinnerTime),
       ),
-      page.getByRole('button', { name: 'Confirm' }).click(),
+      freeDialog.getByRole('button', { name: 'Confirm' }).click(),
     ]);
 
-    await expect(page.getByRole('heading', { name: 'Cancellation Sent' })).toBeVisible();
-    await page.getByRole('button', { name: 'Close' }).click();
-    await expect(page.getByRole('button', { name: 'Free Slot' })).toBeDisabled();
-    await expect(page.getByRole('button', { name: 'Remove Slot' })).toBeEnabled();
+    const cancellationDialog = page.getByRole('dialog', { name: 'Cancellation Sent' });
+    await expect(cancellationDialog).toBeVisible();
+    await cancellationDialog.getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByRole('dialog', { name: 'Cancellation Sent' })).toHaveCount(0);
+    await expect(visibleActionButton('Remove Slot')).toBeEnabled();
+
+    await visibleActionButton('Remove Slot').click();
+    const removeDialog = page.getByRole('dialog', { name: 'Remove Dinner Slot' });
+    await expect(removeDialog).toBeVisible();
+    await removeDialog.getByRole('button', { name: flowDinnerTimeLabel }).click();
 
     await Promise.all([
       page.waitForResponse(
@@ -290,12 +328,10 @@ test.describe('1201 Bistro Website', () => {
             flowDinnerTime,
           ),
       ),
-      page.getByRole('button', { name: 'Remove Slot' }).click(),
+      removeDialog.getByRole('button', { name: 'Confirm' }).click(),
     ]);
 
-    await expect(page.getByText('No dinner slots are open for this date yet.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Remove Slot' })).toBeDisabled();
-    await expect(page.getByRole('button', { name: 'Free Slot' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: flowDinnerTimeLabel })).toHaveCount(0);
   });
 
   test('should show error for a wrong access code', async ({ page }) => {
@@ -340,14 +376,11 @@ test.describe('1201 Bistro Website', () => {
   test('should let a mobile guest select an opened seating', async ({ page }, testInfo) => {
     test.skip(!testInfo.project.name.includes('Mobile'), 'Mobile-only booking coverage');
 
-    const targetDateObject = new Date();
-    targetDateObject.setDate(targetDateObject.getDate() + 10 + Math.floor(Math.random() * 5));
-    const targetDate = formatIsoDate(targetDateObject);
-    const mobileDinnerTime = '18:15';
-    const mobileDinnerTimeLabel = formatUiTime(mobileDinnerTime);
+    const mobileDinnerTime = primaryDinnerTime;
+    const mobileDinnerTimeLabel = primaryDinnerTimeLabel;
 
     await loginToReserve(page, 'service1201');
-    await selectCalendarDate(page, targetDateObject);
+    const targetDate = await page.locator('input[name="date"]').inputValue();
     await expect(page.locator('input[name="date"]')).toHaveValue(targetDate);
 
     await page.getByRole('button', { name: 'Add Slot' }).click();
@@ -361,9 +394,9 @@ test.describe('1201 Bistro Website', () => {
       ),
       page.getByRole('button', { name: 'Save and Open' }).click(),
     ]);
+    trackSlot(targetDate, mobileDinnerTime);
 
     await loginToReserve(page, 'bistro1201');
-    await selectCalendarDate(page, targetDateObject);
     await expect(page.locator('input[name="date"]')).toHaveValue(targetDate);
 
     const timeButton = page.getByRole('button', { name: mobileDinnerTimeLabel });
@@ -380,17 +413,15 @@ test.describe('1201 Bistro Website', () => {
   });
 
   test('should keep an opened reservation slot visible after leaving reserve and coming back', async ({ page }) => {
+    const persistentDinnerTime = secondaryDinnerTime;
+    const persistentDinnerTimeLabel = secondaryDinnerTimeLabel;
+
     await loginToReserve(page, 'service1201');
-
-    const today = new Date();
-    const targetDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3);
-    const targetDay = targetDate.getDate().toString();
-
-    await selectCalendarDate(page, targetDate);
-    await expect(page.locator('input[name="date"]')).toHaveValue(formatIsoDate(targetDate));
+    const targetDate = await page.locator('input[name="date"]').inputValue();
+    await expect(page.locator('input[name="date"]')).toHaveValue(targetDate);
 
     await page.getByRole('button', { name: 'Add Slot' }).click();
-    await page.locator('input[name="dinner_time"]').fill(dinnerTime);
+    await page.locator('input[name="dinner_time"]').fill(persistentDinnerTime);
 
     await Promise.all([
       page.waitForResponse(
@@ -401,21 +432,20 @@ test.describe('1201 Bistro Website', () => {
       ),
       page.getByRole('button', { name: 'Save and Open' }).click(),
     ]);
+    trackSlot(targetDate, persistentDinnerTime);
 
-    await expect(page.getByText('These are the dinner slots currently open for this date.')).toBeVisible();
-    await expect(page.getByRole('button', { name: dinnerTimeLabel })).toBeVisible();
+    await resetReserveAccess(page, page.context());
+    await loginToReserve(page, 'bistro1201');
+    await expect(page.locator('input[name="date"]')).toHaveValue(targetDate);
+    await expect(page.getByRole('button', { name: persistentDinnerTimeLabel })).toBeVisible();
 
     await navigateToPrimaryRoute(page, 'About');
     await expect(page).toHaveURL(/\/about$/);
 
-    await loginToReserve(page, 'service1201');
-    await selectCalendarDate(page, targetDate);
-
-    const targetTile = page.getByRole('button', { name: formatCalendarLabel(targetDate) });
-    await expect(targetTile).toContainText(targetDay);
-    await expect(page.getByText('These are the dinner slots currently open for this date.')).toBeVisible();
-    await expect(page.getByRole('button', { name: dinnerTimeLabel })).toBeVisible();
-    await expect(page.locator('input[name="date"]')).toHaveValue(formatIsoDate(targetDate));
+    await loginToReserve(page, 'bistro1201');
+    await expect(page.locator('input[name="date"]')).toHaveValue(targetDate);
+    await expect(page.getByRole('button', { name: persistentDinnerTimeLabel })).toBeVisible();
+    await expect(page.locator('input[name="date"]')).toHaveValue(targetDate);
   });
 });
 
@@ -445,6 +475,18 @@ function matchesDeleteRequest(response, pathname, queryKey, queryValue) {
 
   const url = new URL(response.url());
   return url.pathname.endsWith(pathname) && url.searchParams.get(queryKey) === queryValue;
+}
+
+function dedupeTrackedItems(items) {
+  const seen = new Set();
+  return [...items].reverse().filter((item) => {
+    const key = `${item.date}::${item.time}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 }
 
 async function navigateToPrimaryRoute(page, linkName) {

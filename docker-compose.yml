@@ -79,6 +79,7 @@ services:
       BASE_URL: ${E2E_BASE_URL:-http://nginx}
     volumes:
       - ./frontend:/work/frontend
+      - ./scripts:/work/scripts:ro
 
 volumes:
   frontend_node_modules:
