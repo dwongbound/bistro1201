@@ -35,6 +35,7 @@ function GuestReservationCard({
           name="date"
           onChange={onInputChange}
           value={form.date}
+          availableDateSet={availableDateSet}
         />
 
         <Stack spacing={1}>

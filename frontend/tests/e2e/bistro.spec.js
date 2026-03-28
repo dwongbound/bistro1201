@@ -412,6 +412,25 @@ test.describe('1201 Bistro Website', () => {
     expect(hasPageOverflow).toBe(false);
   });
 
+  test('should load the gallery admin login gate and allow staff sign-in at /staff/gallery', async ({ page }) => {
+    await page.goto('/staff/gallery');
+
+    // Login gate is visible — page is not linked in the public nav
+    await expect(page.getByText('Staff Access Only')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Staff Login' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign In' })).toBeVisible();
+
+    // Staff login succeeds
+    await page.getByLabel('Staff Access Code').fill('service1201');
+    await page.getByRole('button', { name: 'Sign In' }).click();
+
+    // Authenticated gallery admin panel is rendered
+    await expect(page.getByRole('button', { name: /Sign Out/i })).toBeVisible();
+    await expect(page.getByText('New Event')).toBeVisible();
+    await expect(page.getByLabel(/^Slug/)).toBeVisible();
+    await expect(page.getByText('Events')).toBeVisible();
+  });
+
   test('should keep an opened reservation slot visible after leaving reserve and coming back', async ({ page }) => {
     const persistentDinnerTime = secondaryDinnerTime;
     const persistentDinnerTimeLabel = secondaryDinnerTimeLabel;

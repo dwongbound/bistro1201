@@ -1,7 +1,8 @@
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
-import { Alert, Box, Button, CardMedia, Chip, CircularProgress, Grid, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, CircularProgress, Grid, Stack, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
+import FadeInImage from '../../common/FadeInImage';
 import PageIntro from '../../common/PageIntro';
 import SurfaceCard from '../../common/SurfaceCard';
 import { fetchGalleryEvent } from './galleryApi';
@@ -103,7 +104,7 @@ function GalleryEventDetail() {
         descriptionProps={{ sx: { maxWidth: 760 } }}
       />
       <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-        <Chip label="Event Gallery" color="secondary" sx={{ width: 'fit-content', fontWeight: 700 }} />
+        <Chip label={event.eventType} color="secondary" sx={{ width: 'fit-content', fontWeight: 700 }} />
         <Chip label={event.dateLabel} variant="outlined" sx={{ width: 'fit-content' }} />
       </Stack>
       <Button
@@ -115,15 +116,19 @@ function GalleryEventDetail() {
       >
         Back to Gallery
       </Button>
-      <Grid container spacing={3}>
-        {event.galleryImages.map((image) => (
-          <Grid key={image.alt} size={{ xs: 12, sm: 6 }}>
-            <SurfaceCard cardSx={{ overflow: 'hidden' }} contentSx={{ p: 0 }}>
-              <CardMedia component="img" image={image.src} alt={image.alt} sx={{ height: { xs: 260, sm: 320 } }} />
-            </SurfaceCard>
-          </Grid>
-        ))}
-      </Grid>
+      {event.galleryImages.length === 0 ? (
+        <Alert severity="info">No gallery images have been added to this event yet.</Alert>
+      ) : (
+        <Grid container spacing={3}>
+          {event.galleryImages.map((image) => (
+            <Grid key={`${image.src}-${image.alt}`} size={{ xs: 12, sm: 6 }}>
+              <SurfaceCard cardSx={{ overflow: 'hidden' }} contentSx={{ p: 0 }}>
+                <FadeInImage src={image.src} alt={image.alt} sx={{ aspectRatio: '4/3' }} />
+              </SurfaceCard>
+            </Grid>
+          ))}
+        </Grid>
+      )}
     </Box>
   );
 }

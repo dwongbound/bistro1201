@@ -1,4 +1,5 @@
 import LockRoundedIcon from '@mui/icons-material/LockRounded';
+import PhotoLibraryRoundedIcon from '@mui/icons-material/PhotoLibraryRounded';
 import {
   Alert,
   Box,
@@ -7,6 +8,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   Stack,
   TextField,
   Typography,
@@ -332,6 +334,16 @@ function StaffControlsCard({
               </Stack>
             </Stack>
           </Box>
+          <Divider sx={{ borderColor: 'rgba(217, 195, 161, 0.12)' }} />
+          <Button
+            component="a"
+            href="/staff/gallery"
+            variant="outlined"
+            startIcon={<PhotoLibraryRoundedIcon />}
+            fullWidth={isMobile}
+          >
+            Gallery Admin
+          </Button>
         </Stack>
       ) : (
         <Stack component="form" onSubmit={onUnlockStaff} spacing={2}>

@@ -46,6 +46,7 @@ pub(crate) struct GalleryEventSummary {
     pub(crate) title: String,
     pub(crate) date_label: String,
     pub(crate) summary: String,
+    pub(crate) event_type: String,
     pub(crate) cover_image: String,
     pub(crate) preview_images: Vec<GalleryImage>,
 }
@@ -57,6 +58,7 @@ pub(crate) struct GalleryEventDetail {
     pub(crate) title: String,
     pub(crate) date_label: String,
     pub(crate) summary: String,
+    pub(crate) event_type: String,
     pub(crate) cover_image: String,
     pub(crate) preview_images: Vec<GalleryImage>,
     pub(crate) gallery_images: Vec<GalleryImage>,
@@ -114,6 +116,50 @@ pub(crate) struct DeleteAvailabilityResponse {
     pub(crate) availability: AvailabilityDate,
     pub(crate) removed_reservation: Option<Reservation>,
     pub(crate) cancellation_email_sent: bool,
+}
+
+/// Request body for creating a new gallery event.
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct CreateGalleryEventRequest {
+    pub(crate) slug: String,
+    pub(crate) title: String,
+    pub(crate) date_label: String,
+    pub(crate) summary: String,
+    pub(crate) event_type: Option<String>,
+    pub(crate) cover_image_url: String,
+    pub(crate) sort_order: Option<i64>,
+}
+
+/// Confirms a gallery event was deleted.
+#[derive(Serialize, ToSchema)]
+pub(crate) struct DeleteGalleryEventResponse {
+    pub(crate) slug: String,
+}
+
+/// Request body for adding an image to a gallery event.
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct CreateGalleryImageRequest {
+    pub(crate) image_url: String,
+    pub(crate) alt_text: String,
+    pub(crate) sort_order: Option<i64>,
+    pub(crate) is_preview: Option<bool>,
+}
+
+/// One gallery image record as stored in the database.
+#[derive(Serialize, FromRow, ToSchema)]
+pub(crate) struct GalleryImageRecord {
+    pub(crate) id: i64,
+    pub(crate) event_slug: String,
+    pub(crate) image_url: String,
+    pub(crate) alt_text: String,
+    pub(crate) sort_order: i64,
+    pub(crate) is_preview: bool,
+}
+
+/// Confirms a gallery image was deleted.
+#[derive(Serialize, ToSchema)]
+pub(crate) struct DeleteGalleryImageResponse {
+    pub(crate) id: i64,
 }
 
 /// Stores one backend access-code record with an optional expiration timestamp.

@@ -4,9 +4,10 @@ use utoipa::{Modify, OpenApi};
 
 use crate::error::ErrorResponse;
 use crate::models::{
-    AccessCodeRecord, AvailabilityDate, CreateAccessCodeRequest, CreateReservationResponse, DeleteAvailabilityResponse,
-    GalleryEventDetail, GalleryEventSummary, GalleryImage, LoginRequest, LoginResponse, DeleteReservationResponse,
-    Reservation,
+    AccessCodeRecord, AvailabilityDate, CreateAccessCodeRequest, CreateGalleryEventRequest, CreateGalleryImageRequest,
+    CreateReservationResponse, DeleteAvailabilityResponse, DeleteGalleryEventResponse, DeleteGalleryImageResponse,
+    GalleryEventDetail, GalleryEventSummary, GalleryImage, GalleryImageRecord, LoginRequest, LoginResponse,
+    DeleteReservationResponse, Reservation,
 };
 
 struct SecurityAddon;
@@ -41,7 +42,11 @@ impl Modify for SecurityAddon {
         crate::handlers::create_access_code,
         crate::handlers::delete_access_code,
         crate::handlers::get_gallery_events,
-        crate::handlers::get_gallery_event
+        crate::handlers::get_gallery_event,
+        crate::handlers::create_gallery_event,
+        crate::handlers::delete_gallery_event_handler,
+        crate::handlers::create_gallery_image,
+        crate::handlers::delete_gallery_image_handler
     ),
     components(
         schemas(
@@ -57,7 +62,12 @@ impl Modify for SecurityAddon {
             AccessCodeRecord,
             GalleryImage,
             GalleryEventSummary,
-            GalleryEventDetail
+            GalleryEventDetail,
+            CreateGalleryEventRequest,
+            CreateGalleryImageRequest,
+            GalleryImageRecord,
+            DeleteGalleryEventResponse,
+            DeleteGalleryImageResponse
         )
     ),
     modifiers(&SecurityAddon),

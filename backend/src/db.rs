@@ -1,6 +1,7 @@
 use crate::models::{
-    AccessCodeLookup, AccessCodeRecord, AccessCodeSeed, AvailabilityDate, GalleryEventDetail, GalleryEventSummary,
-    GalleryImage, Reservation, GUEST_ROLE, STAFF_ROLE,
+    AccessCodeLookup, AccessCodeRecord, AccessCodeSeed, AvailabilityDate, CreateGalleryEventRequest,
+    CreateGalleryImageRequest, DeleteGalleryEventResponse, DeleteGalleryImageResponse, GalleryEventDetail,
+    GalleryEventSummary, GalleryImage, GalleryImageRecord, Reservation, GUEST_ROLE, STAFF_ROLE,
 };
 use chrono::DateTime;
 use sqlx::postgres::PgPoolOptions;
@@ -15,6 +16,7 @@ struct GalleryEventRow {
     title: String,
     date_label: String,
     summary: String,
+    event_type: String,
     cover_image_url: String,
 }
 
@@ -97,10 +99,16 @@ pub(crate) async fn ensure_schema(pool: &PgPool) -> Result<()> {
             title TEXT NOT NULL,
             date_label TEXT NOT NULL,
             summary TEXT NOT NULL,
+            event_type TEXT NOT NULL DEFAULT 'Event',
             cover_image_url TEXT NOT NULL,
             sort_order BIGINT NOT NULL DEFAULT 0,
             created_at BIGINT NOT NULL
         )",
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query(
+        "ALTER TABLE gallery_events ADD COLUMN IF NOT EXISTS event_type TEXT NOT NULL DEFAULT 'Event'",
     )
     .execute(pool)
     .await?;
@@ -181,7 +189,7 @@ pub(crate) async fn fetch_available_dates(pool: &PgPool) -> Result<Vec<Availabil
 /// Loads the Gallery index data from Postgres so staff can update content without a frontend redeploy.
 pub(crate) async fn fetch_gallery_event_summaries(pool: &PgPool) -> Result<Vec<GalleryEventSummary>> {
     let event_rows = sqlx::query_as::<_, GalleryEventRow>(
-        "SELECT slug, title, date_label, summary, cover_image_url
+        "SELECT slug, title, date_label, summary, event_type, cover_image_url
          FROM gallery_events
          ORDER BY sort_order, created_at DESC, slug",
     )
@@ -207,7 +215,7 @@ pub(crate) async fn fetch_gallery_event_summaries(pool: &PgPool) -> Result<Vec<G
 /// Loads one full gallery event and all of its ordered images.
 pub(crate) async fn fetch_gallery_event_detail(pool: &PgPool, slug: &str) -> Result<Option<GalleryEventDetail>> {
     let event_row = sqlx::query_as::<_, GalleryEventRow>(
-        "SELECT slug, title, date_label, summary, cover_image_url
+        "SELECT slug, title, date_label, summary, event_type, cover_image_url
          FROM gallery_events
          WHERE slug = $1
          LIMIT 1",
@@ -240,6 +248,7 @@ pub(crate) async fn fetch_gallery_event_detail(pool: &PgPool, slug: &str) -> Res
         .collect::<Vec<_>>();
     let gallery_images = image_rows
         .iter()
+        .filter(|image| !image.is_preview)
         .map(|image| GalleryImage {
             src: image.image_url.clone(),
             alt: image.alt_text.clone(),
@@ -251,6 +260,7 @@ pub(crate) async fn fetch_gallery_event_detail(pool: &PgPool, slug: &str) -> Res
         title: event_row.title,
         date_label: event_row.date_label,
         summary: event_row.summary,
+        event_type: event_row.event_type,
         cover_image: event_row.cover_image_url,
         preview_images,
         gallery_images,
@@ -489,6 +499,94 @@ pub(crate) async fn find_role_for_token(pool: &PgPool, token: &str) -> Result<Op
     .await
 }
 
+/// Inserts a new gallery event and returns it.
+pub(crate) async fn insert_gallery_event(
+    pool: &PgPool,
+    req: &CreateGalleryEventRequest,
+) -> Result<GalleryEventSummary> {
+    let sort_order = req.sort_order.unwrap_or(0);
+    let created_at = current_timestamp() as i64;
+    let event_type = req.event_type.clone().unwrap_or_else(|| "Event".to_string());
+    sqlx::query(
+        "INSERT INTO gallery_events (slug, title, date_label, summary, event_type, cover_image_url, sort_order, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+    )
+    .bind(&req.slug)
+    .bind(&req.title)
+    .bind(&req.date_label)
+    .bind(&req.summary)
+    .bind(&event_type)
+    .bind(&req.cover_image_url)
+    .bind(sort_order)
+    .bind(created_at)
+    .execute(pool)
+    .await?;
+
+    Ok(GalleryEventSummary {
+        slug: req.slug.clone(),
+        title: req.title.clone(),
+        date_label: req.date_label.clone(),
+        summary: req.summary.clone(),
+        event_type,
+        cover_image: req.cover_image_url.clone(),
+        preview_images: vec![],
+    })
+}
+
+/// Deletes a gallery event by slug and returns the slug if it existed.
+pub(crate) async fn delete_gallery_event(
+    pool: &PgPool,
+    slug: &str,
+) -> Result<Option<DeleteGalleryEventResponse>> {
+    let deleted: Option<String> = sqlx::query_scalar(
+        "DELETE FROM gallery_events WHERE slug = $1 RETURNING slug",
+    )
+    .bind(slug)
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(deleted.map(|s| DeleteGalleryEventResponse { slug: s }))
+}
+
+/// Inserts an image into a gallery event and returns the full record.
+pub(crate) async fn insert_gallery_image(
+    pool: &PgPool,
+    event_slug: &str,
+    req: &CreateGalleryImageRequest,
+) -> Result<GalleryImageRecord> {
+    let sort_order = req.sort_order.unwrap_or(0);
+    let is_preview = req.is_preview.unwrap_or(false);
+    sqlx::query_as::<_, GalleryImageRecord>(
+        "INSERT INTO gallery_images (event_slug, image_url, alt_text, sort_order, is_preview)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, event_slug, image_url, alt_text, sort_order, is_preview",
+    )
+    .bind(event_slug)
+    .bind(&req.image_url)
+    .bind(&req.alt_text)
+    .bind(sort_order)
+    .bind(is_preview)
+    .fetch_one(pool)
+    .await
+}
+
+/// Deletes one gallery image scoped to its parent event and returns its id if it existed.
+pub(crate) async fn delete_gallery_image(
+    pool: &PgPool,
+    event_slug: &str,
+    image_id: i64,
+) -> Result<Option<DeleteGalleryImageResponse>> {
+    let deleted: Option<i64> = sqlx::query_scalar(
+        "DELETE FROM gallery_images WHERE id = $1 AND event_slug = $2 RETURNING id",
+    )
+    .bind(image_id)
+    .bind(event_slug)
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(deleted.map(|id| DeleteGalleryImageResponse { id }))
+}
+
 /// Generates a unique-looking session token from the current time and process counter.
 pub(crate) fn generate_session_token() -> String {
     let timestamp = current_timestamp();
@@ -556,6 +654,7 @@ fn build_gallery_summaries(event_rows: Vec<GalleryEventRow>, image_rows: Vec<Gal
                 title: event.title,
                 date_label: event.date_label,
                 summary: event.summary,
+                event_type: event.event_type,
                 cover_image: event.cover_image_url,
                 preview_images,
             }
