@@ -202,7 +202,10 @@ pub(crate) async fn create_reservation(
         ApiError::internal("Unable to save reservation")
     })?;
 
-    let confirmation_email_sent = send_confirmation_email(&state, &saved).await?;
+    let confirmation_email_sent = send_confirmation_email(&state, &saved).await.unwrap_or_else(|error| {
+        tracing::error!(?error, "Failed to send reservation confirmation email");
+        false
+    });
 
     Ok(Json(CreateReservationResponse {
         reservation: saved,
@@ -254,7 +257,10 @@ pub(crate) async fn delete_reservation(
         })?
         .ok_or_else(|| ApiError::not_found("Reserved slot was not found"))?;
 
-    let cancellation_email_sent = send_cancellation_email(&state, &removed).await?;
+    let cancellation_email_sent = send_cancellation_email(&state, &removed).await.unwrap_or_else(|error| {
+        tracing::error!(?error, "Failed to send reservation cancellation email");
+        false
+    });
 
     Ok(Json(DeleteReservationResponse {
         reservation: removed,
@@ -374,7 +380,10 @@ pub(crate) async fn delete_available_date(
         })?;
 
     let cancellation_email_sent = if let Some(reservation) = removed_reservation.as_ref() {
-        send_cancellation_email(&state, reservation).await?
+        send_cancellation_email(&state, reservation).await.unwrap_or_else(|error| {
+            tracing::error!(?error, "Failed to send slot removal cancellation email");
+            false
+        })
     } else {
         false
     };

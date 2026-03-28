@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'backend/**'
+      - 'fly.toml'
   workflow_dispatch:
 
 jobs:
