@@ -839,6 +839,8 @@ describe('Scheduling Component', () => {
       expect(screen.getByRole('button', { name: formatHumanTime('19:00') })).toBeInTheDocument();
     });
 
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: formatHumanTime('19:00') }));
     await user.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => {
@@ -931,6 +933,7 @@ describe('Scheduling Component', () => {
     });
 
     const removeDialog = screen.getByRole('dialog', { name: 'Remove Dinner Slot' });
+    expect(within(removeDialog).getByRole('button', { name: 'Confirm' })).toBeDisabled();
     await user.click(
       within(removeDialog).getByRole('button', {
         name: formatHumanTime('19:00'),
@@ -1412,6 +1415,9 @@ describe('Scheduling Component', () => {
       screen.getByText(/This will send a cancellation email to the guest on that reservation/i),
     ).toBeInTheDocument();
 
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: formatHumanTime('19:00') }));
     await user.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => {

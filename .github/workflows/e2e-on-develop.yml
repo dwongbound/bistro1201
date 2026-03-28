@@ -1,0 +1,62 @@
+name: E2E on Develop
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  e2e-tests:
+    name: Playwright E2E (${{ matrix.project_name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project_name: chromium
+            artifact_suffix: chromium
+          - project_name: firefox
+            artifact_suffix: firefox
+          - project_name: Mobile Chrome
+            artifact_suffix: mobile-chrome
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Reset isolated E2E stack
+        run: docker compose --env-file env/test.env --profile test down -v || true
+
+      - name: Build and start isolated app stack
+        run: docker compose --env-file env/test.env --profile test up --build -d postgres backend nginx
+
+      - name: Run isolated Playwright suite
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts
+          docker compose --env-file env/test.env --profile test run --rm e2e sh -lc \
+            "cd /work && PLAYWRIGHT_PROJECTS='${{ matrix.project_name }}' ./scripts/run_e2e_in_docker.sh --reporter=line,html" \
+            2>&1 | tee artifacts/playwright-e2e.txt
+
+      - name: Upload Playwright log artifact
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-e2e-log-${{ matrix.artifact_suffix }}
+          path: artifacts/playwright-e2e.txt
+          if-no-files-found: error
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-html-report-${{ matrix.artifact_suffix }}
+          path: |
+            frontend/playwright-report
+            frontend/playwright-artifacts
+          if-no-files-found: warn
+
+      - name: Tear down isolated E2E stack
+        if: always()
+        run: docker compose --env-file env/test.env --profile test down -v

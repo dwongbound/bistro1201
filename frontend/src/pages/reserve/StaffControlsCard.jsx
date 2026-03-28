@@ -55,12 +55,12 @@ function StaffControlsCard({
   }, [selectedDate, selectedDinnerTime]);
 
   useEffect(() => {
-    setTimeToRemove(selectedDinnerTime || selectedDinnerTimes[0] || '');
-  }, [selectedDate, selectedDinnerTime, selectedDinnerTimes]);
+    setTimeToRemove('');
+  }, [selectedDate]);
 
   useEffect(() => {
-    setReservedTimeToFree(reservedDinnerTimes[0] || '');
-  }, [reservedDinnerTimes, selectedDate]);
+    setReservedTimeToFree('');
+  }, [selectedDate]);
 
   /**
    * Confirms the dinner time before opening the selected date to guests.
@@ -106,7 +106,13 @@ function StaffControlsCard({
   };
 
   const handleRemoveSlotClick = async () => {
+    setTimeToRemove('');
     setOpenRemoveDialog(true);
+  };
+
+  const handleFreeSlotClick = async () => {
+    setReservedTimeToFree('');
+    setOpenFreeDialog(true);
   };
 
   const handleFreeSlotSubmit = async () => {
@@ -187,7 +193,7 @@ function StaffControlsCard({
             </Button>
             <Button
               variant="contained"
-              onClick={() => setOpenFreeDialog(true)}
+              onClick={handleFreeSlotClick}
               disabled={staffBusy || !reservedDinnerTimes.length}
               fullWidth={isMobile}
             >

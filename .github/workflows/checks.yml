@@ -1,8 +1,10 @@
-name: CI
+name: Checks
 
 on:
   pull_request:
   push:
+    branches:
+      - '**'
 
 jobs:
   frontend-tests:
@@ -93,62 +95,3 @@ jobs:
           name: backend-cargo-test-report
           path: artifacts/backend-cargo-test.txt
           if-no-files-found: error
-
-  e2e-tests:
-    name: Playwright E2E
-    runs-on: ubuntu-latest
-    needs:
-      - frontend-tests
-      - backend-tests
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Run isolated Playwright suite
-        shell: bash
-        run: |
-          set -o pipefail
-          mkdir -p artifacts
-          docker compose --env-file env/test.env --profile test run --rm e2e sh -lc \
-            "npm ci && npx playwright test --reporter=line,html" 2>&1 | tee artifacts/playwright-e2e.txt
-
-      - name: Upload Playwright log artifact
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: playwright-e2e-log
-          path: artifacts/playwright-e2e.txt
-          if-no-files-found: error
-
-      - name: Upload Playwright HTML report
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: playwright-html-report
-          path: |
-            frontend/playwright-report
-            frontend/playwright-artifacts
-          if-no-files-found: warn
-
-      - name: Tear down isolated E2E stack
-        if: always()
-        run: docker compose --env-file env/test.env --profile test down -v
-
-  deploy:
-    name: Deploy to Fly.io
-    runs-on: ubuntu-latest
-    needs: e2e-tests
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@master
-
-      - name: Deploy to Fly.io
-        run: fly deploy --remote-only
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

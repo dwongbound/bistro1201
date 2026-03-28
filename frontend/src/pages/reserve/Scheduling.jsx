@@ -843,7 +843,8 @@ function Scheduling() {
       </Grid>
       <ReservationConfirmationDialog
         confirmationDialog={confirmationDialog}
-        onClose={() => setConfirmationDialog({ open: false, title: '', message: '' })}
+        onClose={() => setConfirmationDialog((current) => ({ ...current, open: false }))}
+        onExited={() => setConfirmationDialog({ open: false, title: '', message: '' })}
       />
     </Box>
   );
