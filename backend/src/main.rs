@@ -109,6 +109,7 @@ async fn main() {
     // Keep the env parsing close to startup so the app's runtime inputs are easy to spot.
     let database_url = env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@postgres:5432/bistro1201".to_string());
+    tracing::info!("connecting to database: {}", database_url);
     let port: u16 = env::var("PORT")
         .unwrap_or_else(|_| "3000".to_string())
         .parse()
