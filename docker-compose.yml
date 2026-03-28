@@ -1,6 +1,6 @@
 services:
   postgres:
-    profiles: ["local"]
+    profiles: ["local", "test"]
     image: postgres:17
     ports:
       - "${POSTGRES_HOST_PORT:-5432}:5432"
@@ -79,6 +79,7 @@ services:
       BASE_URL: ${E2E_BASE_URL:-http://nginx}
     volumes:
       - ./frontend:/work/frontend
+      - ./scripts:/work/scripts:ro
 
 volumes:
   frontend_node_modules:

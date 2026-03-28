@@ -22,14 +22,14 @@ stack so test runs do not depend on your normal local app state.
 
 ```bash
 docker compose --env-file env/test.env --profile test run --rm e2e sh -lc \
-  "npm ci && npx playwright test tests/e2e/bistro.spec.js --reporter=line"
+  "cd /work && ./scripts/run_e2e_in_docker.sh tests/e2e/bistro.spec.js --reporter=line"
 ```
 
 For desktop plus mobile coverage:
 
 ```bash
 docker compose --env-file env/test.env --profile test run --rm e2e sh -lc \
-  "npm ci && npx playwright test --project=chromium --project=\"Mobile Chrome\" --reporter=line"
+  "cd /work && ./scripts/run_e2e_in_docker.sh --project=chromium --project=\"Mobile Chrome\" --reporter=line"
 ```
 
 ## Cleanup

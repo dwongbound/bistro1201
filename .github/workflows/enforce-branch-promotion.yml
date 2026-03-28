@@ -1,0 +1,32 @@
+name: Enforce Branch Promotion
+
+on:
+  pull_request:
+    branches:
+      - staging
+      - main
+
+jobs:
+  enforce-promotion-path:
+    name: Enforce Promotion Path
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate allowed source branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -eu
+
+          if [ "$BASE_REF" = "staging" ] && [ "$HEAD_REF" != "develop" ]; then
+            echo "Pull requests into staging must come from develop."
+            exit 1
+          fi
+
+          if [ "$BASE_REF" = "main" ] && [ "$HEAD_REF" != "staging" ]; then
+            echo "Pull requests into main must come from staging."
+            exit 1
+          fi
+
+          echo "Branch promotion path is valid: $HEAD_REF -> $BASE_REF"
