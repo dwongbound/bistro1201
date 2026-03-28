@@ -405,18 +405,35 @@ the built frontend on Cloudflare and point it at a separately hosted backend.
 
 ## GitHub Actions
 
-This repo now includes a GitHub Actions workflow for CI:
+This repo now uses separate GitHub Actions workflows for CI and deploy:
 
 - [.github/workflows/ci.yml](/Users/dwong/Documents/bistro1201/.github/workflows/ci.yml)
   Runs frontend Jest, backend `cargo test`, and the isolated Playwright suite
-  on pull requests and pushes to `main`.
+  on pull requests into `develop` and pushes to `develop`.
+- [.github/workflows/deploy-main.yml](/Users/dwong/Documents/bistro1201/.github/workflows/deploy-main.yml)
+  Deploys to Fly.io on pushes to `main`.
+
+### Required GitHub Secrets
+
+For Fly.io deployment from GitHub Actions, add this repository secret:
+
+- `FLY_API_TOKEN`
+
+GitHub path:
+
+1. Open the repository.
+2. Go to `Settings`.
+3. Open `Secrets and variables`.
+4. Open `Actions`.
+5. Add a repository secret named `FLY_API_TOKEN`.
 
 ### Suggested GitHub Flow
 
 1. Push feature branches and open pull requests.
 2. Let `CI` validate frontend unit tests, backend tests, and the Playwright E2E suite.
-3. Merge into `main` once CI is green.
-4. Deploy using whichever hosting platform you decide on later.
+3. Merge `develop` into `staging` once CI is green.
+4. Merge `staging` into `main` once the promotion path is approved.
+5. Let the `main` push trigger the Fly.io deploy workflow.
 
 ## Environment Variables
 

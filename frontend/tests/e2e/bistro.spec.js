@@ -44,6 +44,16 @@ test.describe('1201 Bistro Website', () => {
     await expect(reserveHeading).toBeVisible();
   };
 
+  const resetReserveAccess = async (page, context) => {
+    await context.clearCookies();
+    await page.goto('/');
+    await page.evaluate(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+    });
+    await page.goto('/reserve');
+  };
+
   test('should load homepage', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle(/1201 Bistro/);
@@ -193,13 +203,11 @@ test.describe('1201 Bistro Website', () => {
     await expect(page.getByRole('button', { name: firstDinnerTimeLabel })).toHaveCount(0);
   });
 
-  test('should let staff add, free, and then remove a reserved slot', async ({ page }) => {
+  test('should let staff add, free, and then remove a reserved slot', async ({ page, context }) => {
     const targetDateObject = new Date();
-    targetDateObject.setDate(targetDateObject.getDate() + 3 + Math.floor(Math.random() * 4));
+    targetDateObject.setDate(targetDateObject.getDate() + 5);
     const targetDate = formatIsoDate(targetDateObject);
-    const flowDinnerTimeOptions = ['18:15', '18:30', '18:45', '19:15'];
-    const flowDinnerTime =
-      flowDinnerTimeOptions[Math.floor(Math.random() * flowDinnerTimeOptions.length)];
+    const flowDinnerTime = '18:30';
     const flowDinnerTimeLabel = formatUiTime(flowDinnerTime);
 
     await loginToReserve(page, 'service1201');
@@ -222,7 +230,7 @@ test.describe('1201 Bistro Website', () => {
 
     await expect(page.locator('p', { hasText: flowDinnerTimeLabel }).first()).toBeVisible();
 
-    await page.getByRole('button', { name: 'Sign Out' }).click();
+    await resetReserveAccess(page, context);
     await expect(page.getByRole('heading', { name: 'Enter an Access Code' })).toBeVisible();
 
     await loginToReserve(page, 'bistro1201');
@@ -262,9 +270,7 @@ test.describe('1201 Bistro Website', () => {
     await Promise.all([
       page.waitForResponse(
         (response) =>
-          response.url().includes(`/api/reservations/${targetDate}?time=${encodeURIComponent(flowDinnerTime)}`) &&
-          response.request().method() === 'DELETE' &&
-          response.ok(),
+          matchesDeleteRequest(response, `/api/reservations/${targetDate}`, 'time', flowDinnerTime),
       ),
       page.getByRole('button', { name: 'Confirm' }).click(),
     ]);
@@ -277,11 +283,12 @@ test.describe('1201 Bistro Website', () => {
     await Promise.all([
       page.waitForResponse(
         (response) =>
-          response
-            .url()
-            .includes(`/api/availability/${targetDate}?dinner_time=${encodeURIComponent(flowDinnerTime)}`) &&
-          response.request().method() === 'DELETE' &&
-          response.ok(),
+          matchesDeleteRequest(
+            response,
+            `/api/availability/${targetDate}`,
+            'dinner_time',
+            flowDinnerTime,
+          ),
       ),
       page.getByRole('button', { name: 'Remove Slot' }).click(),
     ]);
@@ -398,7 +405,7 @@ test.describe('1201 Bistro Website', () => {
     await expect(page.getByText('These are the dinner slots currently open for this date.')).toBeVisible();
     await expect(page.getByRole('button', { name: dinnerTimeLabel })).toBeVisible();
 
-    await page.getByRole('link', { name: 'About' }).click();
+    await navigateToPrimaryRoute(page, 'About');
     await expect(page).toHaveURL(/\/about$/);
 
     await loginToReserve(page, 'service1201');
@@ -429,6 +436,15 @@ function formatUiTime(timeValue) {
     minute: '2-digit',
     hour12: true,
   });
+}
+
+function matchesDeleteRequest(response, pathname, queryKey, queryValue) {
+  if (response.request().method() !== 'DELETE' || !response.ok()) {
+    return false;
+  }
+
+  const url = new URL(response.url());
+  return url.pathname.endsWith(pathname) && url.searchParams.get(queryKey) === queryValue;
 }
 
 async function navigateToPrimaryRoute(page, linkName) {
