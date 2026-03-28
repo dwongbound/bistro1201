@@ -1092,7 +1092,7 @@ mod tests {
         let detail = fetch_gallery_event_detail(&pool, "spring-supper").await.unwrap().unwrap();
         assert_eq!(detail.slug, "spring-supper");
         assert_eq!(detail.preview_images.len(), 2);
-        assert_eq!(detail.gallery_images.len(), 3);
-        assert_eq!(detail.gallery_images[2].alt, "Dessert course");
+        assert_eq!(detail.gallery_images.len(), 1);
+        assert_eq!(detail.gallery_images[0].alt, "Dessert course");
     }
 }
