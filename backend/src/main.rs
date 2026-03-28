@@ -23,7 +23,7 @@ use crate::email::load_email_config;
 use crate::handlers::{
     create_access_code, create_available_date, create_reservation, delete_access_code, delete_available_date,
     delete_reservation, get_access_codes, get_available_dates, get_gallery_event, get_gallery_events, get_reservations,
-    login, root,
+    health, login, root,
 };
 use crate::state::AppState;
 
@@ -32,6 +32,7 @@ fn build_app(state: AppState) -> Router {
     Router::new()
         .merge(SwaggerUi::new("/api/docs").url("/api/openapi.json", ApiDoc::openapi()))
         .route("/", get(root))
+        .route("/health", get(health))
         .route("/api/gallery", get(get_gallery_events))
         .route("/api/gallery/:slug", get(get_gallery_event))
         .route("/api/auth/login", post(login))

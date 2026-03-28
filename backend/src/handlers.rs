@@ -33,6 +33,19 @@ pub(crate) async fn root() -> &'static str {
     "Hello from 1201 Bistro Backend"
 }
 
+/// Provides a dedicated health-check endpoint for load balancers and uptime monitors.
+#[utoipa::path(
+    get,
+    path = "/health",
+    tag = "health",
+    responses(
+        (status = 200, description = "Service is healthy", body = String)
+    )
+)]
+pub(crate) async fn health() -> &'static str {
+    "ok"
+}
+
 /// Returns every gallery event summary for the public gallery index.
 #[utoipa::path(
     get,
