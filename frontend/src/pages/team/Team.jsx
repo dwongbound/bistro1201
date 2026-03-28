@@ -9,14 +9,14 @@ const teamMembers = [
     role: 'Executive Chef',
     bio: 'Shapes the seasonal menus, leads the kitchen, and sets the tone for each supper club evening.',
     image: '',
-    imageAlt: 'Portrait of Chef Dylan',
+    imageAlt: 'Portrait of Dylan',
   },
   {
     name: 'Noah Somphone',
     role: 'Chief Operating Officer',
-    bio: 'Shapes the seasonal menus, leads the kitchen, and sets the tone for each supper club evening.',
+    bio: 'Makes bread and stuff',
     image: '',
-    imageAlt: 'Portrait of Chef Noah',
+    imageAlt: 'Portrait of Noah',
   },
   {
     name: 'Rebecca Choi',
@@ -28,9 +28,37 @@ const teamMembers = [
   {
     name: 'Joshua Jeung',
     role: 'Chef de Cuisine',
-    bio: 'Handles the details behind the scenes so the dining room stays polished, calm, and warm throughout the night.',
+    bio: 'Runner.',
     image: '',
-    imageAlt: 'Portrait of the 1201 Bistro team',
+    imageAlt: 'Portrait of the Josh',
+  },
+  {
+    name: 'Grace Hong',
+    role: 'Media Director',
+    bio: 'Social media, photography, and all things visual for the 1201 Bistro brand.',
+    image: '',
+    imageAlt: 'Portrait of Grace',
+  },
+  {
+    name: 'Karen Son',
+    role: 'Director of Guest Experience',
+    bio: 'Welcomes guests, guides the pace of the room, and makes sure each reservation feels personal from arrival to dessert.',
+    image: '',
+    imageAlt: 'Portrait of the Karen',
+  },
+  {
+    name: 'Ezekiel Kim',
+    role: 'Cafe Director / Sous Chef',
+    bio: 'Welcomes guests, guides the pace of the room, and makes sure each reservation feels personal from arrival to dessert.',
+    image: '',
+    imageAlt: 'Portrait of the Zeke',
+  },
+  {
+    name: 'Ben Chong',
+    role: 'Chief Financial Officer',
+    bio: 'All things finance and accounting for the 1201 Bistro business.',
+    image: '',
+    imageAlt: 'Portrait of the Ben',
   },
 ];
 
