@@ -1,21 +1,38 @@
-import { getApiUrl } from '../../common/appConfig';
+import { getApiUrl, getR2BaseUrl } from '../../common/appConfig';
 
-function normalizeImage(image) {
+/**
+ * Converts a raw image path from the DB into a fully-qualified URL.
+ * Paths that are already absolute (http/https) are returned unchanged.
+ * Relative paths are prefixed with the R2 CDN base URL and event slug.
+ */
+function buildImageUrl(rawPath, eventSlug) {
+  if (!rawPath) return '';
+  if (/^https?:\/\//.test(rawPath)) return rawPath;
+  const base = getR2BaseUrl().replace(/\/+$/, '');
+  if (!base) return rawPath;
+  const slug = (eventSlug || '').replace(/^\/+|\/+$/g, '');
+  const file = rawPath.replace(/^\/+/, '');
+  return slug ? `${base}/${slug}/${file}` : `${base}/${file}`;
+}
+
+function normalizeImage(image, eventSlug) {
   return {
-    src: image?.src || '',
+    src: buildImageUrl(image?.src || '', eventSlug),
     alt: image?.alt || '',
   };
 }
 
 function normalizeGalleryEvent(event) {
+  const slug = event?.slug || '';
   return {
-    slug: event?.slug || '',
+    slug,
     title: event?.title || '',
     dateLabel: event?.date_label || '',
     summary: event?.summary || '',
-    coverImage: event?.cover_image || '',
-    previewImages: Array.isArray(event?.preview_images) ? event.preview_images.map(normalizeImage) : [],
-    galleryImages: Array.isArray(event?.gallery_images) ? event.gallery_images.map(normalizeImage) : [],
+    eventType: event?.event_type || 'Event',
+    coverImage: buildImageUrl(event?.cover_image || '', slug),
+    previewImages: Array.isArray(event?.preview_images) ? event.preview_images.map((img) => normalizeImage(img, slug)) : [],
+    galleryImages: Array.isArray(event?.gallery_images) ? event.gallery_images.map((img) => normalizeImage(img, slug)) : [],
   };
 }
 

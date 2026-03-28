@@ -1,7 +1,8 @@
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
-import { Alert, Box, Button, CardMedia, Chip, Grid, Skeleton, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Grid, Skeleton, Stack, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
+import FadeInImage from '../../common/FadeInImage';
 import PageIntro from '../../common/PageIntro';
 import SurfaceCard from '../../common/SurfaceCard';
 import { fetchGalleryEvents } from './galleryApi';
@@ -52,7 +53,7 @@ function Gallery() {
   return (
     <Box sx={{ display: 'grid', gap: 3 }}>
       <PageIntro
-        eyebrow="Gallery"
+        eyebrow="Photos"
         title="Event Gallery"
         description="Browse past evenings, preview a few moments from each event, and open the full photo set for a closer look."
         descriptionProps={{ sx: { maxWidth: 760 } }}
@@ -149,14 +150,18 @@ function Gallery() {
             <Grid key={event.slug} size={{ xs: 12 }}>
               <SurfaceCard cardSx={{ overflow: 'hidden' }} contentSx={{ p: 0 }}>
                 <Grid container>
-                  <Grid size={{ xs: 12, md: 5 }}>
-                    <CardMedia component="img" image={event.coverImage} alt={event.title} sx={{ minHeight: 320, height: '100%' }} />
+                  <Grid size={{ xs: 12, md: 6 }} sx={{ position: 'relative', minHeight: 280 }}>
+                    <FadeInImage
+                      src={event.coverImage}
+                      alt={event.title}
+                      sx={{ position: 'absolute', inset: 0 }}
+                    />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 7 }}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Box sx={{ p: { xs: 2.5, sm: 3 } }}>
                       <Stack spacing={2.5}>
                         <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                          <Chip label="Event" color="secondary" sx={{ width: 'fit-content', fontWeight: 700 }} />
+                          <Chip label={event.eventType} color="secondary" sx={{ width: 'fit-content', fontWeight: 700 }} />
                           <Chip label={event.dateLabel} variant="outlined" sx={{ width: 'fit-content' }} />
                         </Stack>
                         <Box>
@@ -171,7 +176,7 @@ function Gallery() {
                           {event.previewImages.map((image) => (
                             <Grid key={`${event.slug}-${image.src}`} size={{ xs: 12, sm: 6 }}>
                               <SurfaceCard cardSx={{ overflow: 'hidden' }} contentSx={{ p: 0 }}>
-                                <CardMedia component="img" image={image.src} alt={image.alt} sx={{ height: 180 }} />
+                                <FadeInImage src={image.src} alt={image.alt} sx={{ aspectRatio: '4/3' }} />
                               </SurfaceCard>
                             </Grid>
                           ))}

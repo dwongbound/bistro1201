@@ -27,6 +27,7 @@ import Team from './pages/team/Team';
 import Gallery from './pages/gallery/Gallery';
 import GalleryEventDetail from './pages/gallery/GalleryEventDetail';
 import Scheduling from './pages/reserve/Scheduling';
+import StaffGallery from './pages/gallery/StaffGallery';
 
 /**
  * Keeps route selection in the shell while delegating transition visuals to a shared component.
@@ -45,6 +46,7 @@ function AppRoutes() {
         <Route path="/pictures" element={<Gallery />} />
         <Route path="/scheduling" element={<Scheduling />} />
         <Route path="/reserve" element={<Scheduling />} />
+        <Route path="/staff/gallery" element={<StaffGallery />} />
       </Routes>
     </PageTransition>
   );
@@ -133,7 +135,7 @@ function AppShell() {
                       alignSelf: 'stretch',
                       border: 'none',
                       textDecoration: 'none',
-                      fontWeight: 500,
+                      fontWeight: 700,
                       '&:hover': {
                         backgroundColor: 'transparent',
                         textDecoration: 'underline',
@@ -149,7 +151,6 @@ function AppShell() {
                       },
                       '&.active': {
                         color: 'primary.light',
-                        fontWeight: 700,
                         textDecoration: 'underline',
                         textDecorationColor: 'rgba(217, 195, 161, 0.9)',
                         textDecorationThickness: '1px',

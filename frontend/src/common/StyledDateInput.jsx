@@ -133,6 +133,7 @@ function getTodayDateKey() {
  */
 function StyledDateInput({
   allowClear = false,
+  availableDateSet,
   helperText,
   id,
   label,
@@ -359,22 +360,26 @@ function StyledDateInput({
               const isCurrentMonth = day.getMonth() === viewMonth.getMonth();
               const isSelected = dateKey === draftDateKey || (mode === 'date' && dateKey === value);
               const disabled = isDateDisabled(dateKey);
+              const isAvailable = availableDateSet?.has(dateKey);
 
               return (
                 <Box
                   key={dateKey}
                   component="button"
                   type="button"
+                  data-testid={dateKey}
+                  aria-pressed={isSelected}
                   onClick={() => handleDateClick(dateKey)}
                   disabled={disabled}
                   sx={{
+                    position: 'relative',
                     height: 38,
                     border: '1px solid',
-                    borderColor: isSelected ? 'secondary.main' : 'rgba(217, 195, 161, 0.18)',
+                    borderColor: isSelected ? 'secondary.main' : isAvailable ? 'rgba(214, 166, 90, 0.45)' : 'rgba(217, 195, 161, 0.18)',
                     borderRadius: 2,
-                    backgroundColor: isSelected ? 'secondary.main' : 'rgba(255, 255, 255, 0.02)',
+                    backgroundColor: isSelected ? 'secondary.main' : isAvailable ? 'rgba(176, 122, 68, 0.18)' : 'rgba(255, 255, 255, 0.02)',
                     color: isSelected ? '#1a130d' : isCurrentMonth ? 'common.white' : 'rgba(244, 232, 214, 0.45)',
-                    fontWeight: isSelected ? 700 : 500,
+                    fontWeight: isSelected || isAvailable ? 700 : 500,
                     cursor: disabled ? 'default' : 'pointer',
                     opacity: disabled ? 0.3 : 1,
                     transition: 'all 140ms ease',
@@ -385,6 +390,21 @@ function StyledDateInput({
                   }}
                 >
                   {day.getDate()}
+                  {isAvailable && !isSelected ? (
+                    <Box
+                      data-testid="availability-dot"
+                      sx={{
+                        position: 'absolute',
+                        bottom: 4,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: 4,
+                        height: 4,
+                        borderRadius: '50%',
+                        backgroundColor: 'secondary.main',
+                      }}
+                    />
+                  ) : null}
                 </Box>
               );
             })}

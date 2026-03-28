@@ -1,66 +1,73 @@
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import { Box, Grid, Stack, Typography } from '@mui/material';
+
+import FadeInImage from '../../common/FadeInImage';
 import PageIntro from '../../common/PageIntro';
 import SurfaceCard from '../../common/SurfaceCard';
+import { getR2BaseUrl } from '../../common/appConfig';
+
+const r2 = getR2BaseUrl();
+const teamPhoto = (filename) => (r2 ? `${r2}/team/${filename}` : '');
 
 const teamMembers = [
   {
     name: 'Dylan Wong',
     role: 'Executive Chef',
     bio: 'Shapes the seasonal menus, leads the kitchen, and sets the tone for each supper club evening.',
-    image: '',
+    image: teamPhoto('dylan.JPG'),
     imageAlt: 'Portrait of Dylan',
   },
   {
     name: 'Noah Somphone',
     role: 'Chief Operating Officer',
     bio: 'Makes bread and stuff',
-    image: '',
+    image: teamPhoto('noah.JPG'),
     imageAlt: 'Portrait of Noah',
   },
   {
     name: 'Rebecca Choi',
     role: 'Pastry Chef',
     bio: 'Welcomes guests, guides the pace of the room, and makes sure each reservation feels personal from arrival to dessert.',
-    image: '',
+    image: teamPhoto('becca.JPG'),
     imageAlt: 'Portrait of the Becca',
   },
   {
     name: 'Joshua Jeung',
     role: 'Chef de Cuisine',
     bio: 'Runner.',
-    image: '',
+    image: teamPhoto('josh.JPG'),
     imageAlt: 'Portrait of the Josh',
   },
   {
     name: 'Grace Hong',
     role: 'Media Director',
     bio: 'Social media, photography, and all things visual for the 1201 Bistro brand.',
-    image: '',
+    image: teamPhoto('grace.JPG'),
     imageAlt: 'Portrait of Grace',
   },
   {
     name: 'Karen Son',
     role: 'Director of Guest Experience',
     bio: 'Welcomes guests, guides the pace of the room, and makes sure each reservation feels personal from arrival to dessert.',
-    image: '',
+    image: teamPhoto('karen.JPG'),
     imageAlt: 'Portrait of the Karen',
   },
   {
     name: 'Ezekiel Kim',
     role: 'Cafe Director / Sous Chef',
     bio: 'Welcomes guests, guides the pace of the room, and makes sure each reservation feels personal from arrival to dessert.',
-    image: '',
+    image: teamPhoto('zeke.JPG'),
     imageAlt: 'Portrait of the Zeke',
   },
   {
     name: 'Ben Chong',
     role: 'Chief Financial Officer',
     bio: 'All things finance and accounting for the 1201 Bistro business.',
-    image: '',
+    image: teamPhoto('ben.JPG'),
     imageAlt: 'Portrait of the Ben',
   },
 ];
+
 
 /**
  * Introduces the people behind the supper club experience.
@@ -69,7 +76,7 @@ function Team() {
   return (
     <Box sx={{ display: 'grid', gap: 4 }}>
       <PageIntro
-        eyebrow="Meet the Team"
+        eyebrow="Personnel"
         title={
           <>
             <Box component="span" sx={{ display: 'inline' }}>
@@ -105,30 +112,15 @@ function Team() {
       />
       <Grid container spacing={3}>
         {teamMembers.map((member) => (
-          <Grid key={member.name} size={{ xs: 12, md: 4 }}>
+          <Grid key={member.name} size={{ xs: 6, md: 3 }}>
             <SurfaceCard cardSx={{ height: '100%', overflow: 'hidden' }} contentSx={{ p: 0 }}>
               <Stack spacing={2}>
-                <Box
-                  role="img"
-                  aria-label={member.imageAlt}
-                  sx={{
-                    aspectRatio: '4 / 5',
-                    width: '100%',
-                    display: 'grid',
-                    placeItems: 'center',
-                    backgroundImage: member.image
-                      ? `linear-gradient(180deg, rgba(18, 15, 13, 0.06), rgba(18, 15, 13, 0.28)), url(${member.image})`
-                      : 'linear-gradient(180deg, rgba(56, 44, 34, 0.92), rgba(29, 23, 18, 0.98))',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundSize: 'cover',
-                    borderBottom: '1px solid rgba(217, 195, 161, 0.12)',
-                  }}
-                >
-                  {!member.image ? (
-                    <GroupsRoundedIcon sx={{ fontSize: 56, color: 'rgba(217, 195, 161, 0.7)' }} />
-                  ) : null}
-                </Box>
+                <FadeInImage
+                  src={member.image}
+                  alt={member.imageAlt}
+                  placeholder={<GroupsRoundedIcon sx={{ fontSize: 56, color: 'rgba(217, 195, 161, 0.7)' }} />}
+                  sx={{ borderBottom: '1px solid rgba(217, 195, 161, 0.12)' }}
+                />
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pb: { xs: 2.5, sm: 3 } }}>
                   <Stack spacing={2}>
                     <Box>

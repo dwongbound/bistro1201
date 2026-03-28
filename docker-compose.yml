@@ -24,10 +24,13 @@ services:
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
+    depends_on:
+      - backend
     environment:
       NODE_ENV: ${FRONTEND_NODE_ENV:-development}
       APP_INSTANCE: ${APP_INSTANCE:-dev}
       APP_API_BASE_PATH: ${APP_API_BASE_PATH:-/api}
+      APP_R2_BASE_URL: ${APP_R2_BASE_URL:-}
       DEV_API_PROXY_TARGET: ${DEV_API_PROXY_TARGET:-http://backend:3000}
 
   backend:
@@ -49,10 +52,20 @@ services:
       GUEST_ACCESS_CODE_EXPIRES_AT: ${GUEST_ACCESS_CODE_EXPIRES_AT:-}
       STAFF_ACCESS_CODE: ${STAFF_ACCESS_CODE:-service1201}
       POSTMARK_SERVER_TOKEN: ${POSTMARK_SERVER_TOKEN:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-}
       SMTP_FROM_NAME: ${SMTP_FROM_NAME:-}
       SMTP_REPLY_TO_ADDRESS: ${SMTP_REPLY_TO_ADDRESS:-}
       SMTP_REPLY_TO_NAME: ${SMTP_REPLY_TO_NAME:-}
+
+  mailpit:
+    image: axllent/mailpit
+    profiles: ["local"]
+    ports:
+      - "8025:8025"
 
   nginx:
     build:
@@ -61,6 +74,7 @@ services:
       args:
         APP_INSTANCE: ${APP_INSTANCE:-dev}
         APP_API_BASE_PATH: ${APP_API_BASE_PATH:-/api}
+        APP_R2_BASE_URL: ${APP_R2_BASE_URL:-}
     ports:
       - "${NGINX_HOST_PORT:-80}:80"
     depends_on:

@@ -1,12 +1,20 @@
-FROM rust:1.89 as builder
-
+FROM rust:1.89 AS chef
+RUN cargo install cargo-chef
 WORKDIR /app
 
-# Copy the backend source directly so the produced binary always matches the current app.
+FROM chef AS planner
+COPY backend/Cargo.toml backend/Cargo.lock ./
+COPY backend/src ./src
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+# Build dependencies only — cached unless Cargo.toml/Cargo.lock changes.
+RUN cargo chef cook --release --recipe-path recipe.json
+# Build the app binary.
 COPY backend/Cargo.toml backend/Cargo.lock ./
 COPY backend/src ./src
 COPY backend/templates ./templates
-
 RUN cargo build --release
 
 FROM debian:bookworm-slim

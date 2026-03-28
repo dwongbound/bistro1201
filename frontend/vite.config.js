@@ -7,6 +7,7 @@ export default defineConfig({
     'globalThis.__APP_CONFIG__': JSON.stringify({
       apiUrl: process.env.APP_API_BASE_PATH || '/api',
       instance: process.env.APP_INSTANCE || 'dev',
+      r2BaseUrl: process.env.APP_R2_BASE_URL || '',
     }),
   },
   plugins: [react()],
