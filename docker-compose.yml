@@ -1,5 +1,6 @@
 services:
   postgres:
+    profiles: ["local"]
     image: postgres:17
     ports:
       - "${POSTGRES_HOST_PORT:-5432}:5432"
@@ -36,6 +37,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+        required: false
     ports:
       - "${BACKEND_HOST_PORT:-3000}:3000"
     volumes:
