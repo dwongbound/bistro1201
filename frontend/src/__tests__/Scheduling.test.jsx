@@ -620,18 +620,6 @@ describe('Scheduling Component', () => {
     fetch
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ token: 'guest-token', role: 'guest' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [],
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [{ date: openDate, dinner_time: '19:00' }],
-      })
-      .mockResolvedValueOnce({
-        ok: true,
         json: async () => ({ token: 'staff-token', role: 'staff' }),
       })
       .mockResolvedValueOnce({
@@ -654,13 +642,9 @@ describe('Scheduling Component', () => {
       expect(fetch).toHaveBeenNthCalledWith(1, '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: 'bistro1201' }),
-      });
-      expect(fetch).toHaveBeenNthCalledWith(4, '/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: 'service1201' }),
       });
+      expect(fetch).toHaveBeenCalledTimes(4);
     });
   });
 
@@ -669,6 +653,10 @@ describe('Scheduling Component', () => {
     document.cookie = 'bistro_guest_access_code=bistro1201; Path=/';
     document.cookie = 'bistro_staff_access_code=expired-staff; Path=/';
     fetch
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: 'Invalid access code' }),
+      })
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ token: 'guest-token', role: 'guest' }),
@@ -680,10 +668,6 @@ describe('Scheduling Component', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => [{ date: openDate, dinner_time: '19:00' }],
-      })
-      .mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({ error: 'Invalid access code' }),
       });
 
     render(<Scheduling />);
@@ -691,6 +675,16 @@ describe('Scheduling Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();
       expect(fetch).toHaveBeenCalledTimes(4);
+      expect(fetch).toHaveBeenNthCalledWith(1, '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: 'expired-staff' }),
+      });
+      expect(fetch).toHaveBeenNthCalledWith(2, '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: 'bistro1201' }),
+      });
     });
 
     await waitFor(() => {
