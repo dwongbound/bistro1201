@@ -12,7 +12,8 @@ function buildImageUrl(rawPath, eventSlug) {
   if (!base) return rawPath;
   const slug = (eventSlug || '').replace(/^\/+|\/+$/g, '');
   const file = rawPath.replace(/^\/+/, '');
-  return slug ? `${base}/${slug}/${file}` : `${base}/${file}`;
+  const normalizedPath = slug && file.startsWith(`${slug}/`) ? file : slug ? `${slug}/${file}` : file;
+  return `${base}/${normalizedPath}`;
 }
 
 function normalizeImage(image, eventSlug) {

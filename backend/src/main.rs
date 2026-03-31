@@ -2,11 +2,14 @@ mod db;
 mod docs;
 mod email;
 mod error;
+mod gallery_handlers;
 mod handlers;
 mod models;
 mod state;
+mod storage;
 
 use axum::{
+    extract::DefaultBodyLimit,
     routing::{delete, get, post},
     Router,
 };
@@ -18,13 +21,16 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::db::{ensure_default_guest_access_code, init_db, load_default_guest_access_code_from_env};
+use crate::storage::load_storage_state;
 use crate::docs::ApiDoc;
 use crate::email::load_email_config;
+use crate::gallery_handlers::{
+    create_gallery_event, create_gallery_image, delete_gallery_event_handler, delete_gallery_image_handler,
+    get_gallery_event, get_gallery_events, list_gallery_images, upload_gallery_file,
+};
 use crate::handlers::{
-    create_access_code, create_available_date, create_gallery_event, create_gallery_image, create_reservation,
-    delete_access_code, delete_available_date, delete_gallery_event_handler, delete_gallery_image_handler,
-    delete_reservation, get_access_codes, get_available_dates, get_gallery_event, get_gallery_events, get_reservations,
-    health, login, root,
+    create_access_code, create_available_date, create_reservation, delete_access_code, delete_available_date,
+    delete_reservation, get_access_codes, get_available_dates, get_reservations, health, login, root,
 };
 use crate::state::AppState;
 
@@ -36,7 +42,8 @@ fn build_app(state: AppState) -> Router {
         .route("/health", get(health))
         .route("/api/gallery", get(get_gallery_events).post(create_gallery_event))
         .route("/api/gallery/:slug", get(get_gallery_event).delete(delete_gallery_event_handler))
-        .route("/api/gallery/:slug/images", post(create_gallery_image))
+        .route("/api/gallery/:slug/upload", post(upload_gallery_file).layer(DefaultBodyLimit::max(50 * 1024 * 1024)))
+        .route("/api/gallery/:slug/images", get(list_gallery_images).post(create_gallery_image))
         .route("/api/gallery/:slug/images/:id", delete(delete_gallery_image_handler))
         .route("/api/auth/login", post(login))
         .route("/api/access-codes", get(get_access_codes).post(create_access_code))
@@ -125,10 +132,18 @@ async fn main() {
     // New databases start with one guest code, but existing databases keep whatever staff already stored.
     ensure_default_guest_access_code(&db, &default_guest_access_code).await.unwrap();
 
+    let storage = load_storage_state();
+    if storage.is_some() {
+        tracing::info!("object storage configured");
+    } else {
+        tracing::info!("object storage not configured — file uploads will be unavailable");
+    }
+
     let state = AppState {
         db,
         email: load_email_config().unwrap(),
         staff_access_code,
+        storage,
     };
 
     let app = build_app(state);
@@ -156,6 +171,7 @@ mod tests {
             db: pool,
             email: None,
             staff_access_code: "service1201".to_string(),
+            storage: None,
         }
     }
 

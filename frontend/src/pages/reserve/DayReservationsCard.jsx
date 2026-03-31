@@ -1,4 +1,3 @@
-import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
 import { Box, Button, CircularProgress, Divider, Stack, Typography } from '@mui/material';
 import SurfaceCard from '../../common/SurfaceCard';
 import { formatHumanDate } from './reserve';
@@ -16,17 +15,14 @@ function DayReservationsCard({
 }) {
   return (
     <SurfaceCard contentSx={{ p: { xs: 2.5, sm: 3 } }}>
-      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
-        <CalendarMonthRoundedIcon color="secondary" />
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            Selected Night
-          </Typography>
-          <Typography color="text.secondary">
-            {formatHumanDate(selectedDate)}
-          </Typography>
-        </Box>
-      </Stack>
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+          Selected Night
+        </Typography>
+        <Typography color="text.secondary">
+          {formatHumanDate(selectedDate)}
+        </Typography>
+      </Box>
       <Divider sx={{ mb: 2 }} />
       {loadingDashboard ? (
         <Stack direction="row" spacing={1.5} alignItems="center">

@@ -1,6 +1,22 @@
 import { createTheme } from '@mui/material';
 
 /**
+ * Single place to adjust the global corner roundness.
+ * MUI uses this as the base unit — individual components scale from it.
+ */
+export const BORDER_RADIUS = 6;
+
+/**
+ * Corner roundness for pill-style chips and listed time buttons.
+ */
+export const CHIP_BORDER_RADIUS = 24;
+
+/**
+ * Corner roundness for actionable buttons.
+ */
+export const BUTTON_BORDER_RADIUS = 12;
+
+/**
  * Centralizes the Material UI theme so page files do not repeat palette and component styling.
  */
 export const appTheme = createTheme({
@@ -23,7 +39,7 @@ export const appTheme = createTheme({
     },
   },
   shape: {
-    borderRadius: 18,
+    borderRadius: BORDER_RADIUS,
   },
   typography: {
     fontFamily: '"Palatino Linotype", "Book Antiqua", Georgia, serif',
@@ -48,6 +64,7 @@ export const appTheme = createTheme({
         root: {
           textTransform: 'none',
           fontWeight: 700,
+          borderRadius: `${BUTTON_BORDER_RADIUS}px`,
         },
         contained: {
           color: '#120f0d',
@@ -66,12 +83,15 @@ export const appTheme = createTheme({
         root: {
           backgroundImage: 'linear-gradient(180deg, rgba(38, 31, 26, 0.96), rgba(22, 18, 15, 0.98))',
           border: '1px solid rgba(217, 195, 161, 0.12)',
-          boxShadow: '0 24px 48px rgba(0, 0, 0, 0.22)',
+          boxShadow: 'none',
         },
       },
     },
     MuiChip: {
       styleOverrides: {
+        root: {
+          borderRadius: `${CHIP_BORDER_RADIUS}px`,
+        },
         outlined: {
           borderColor: 'rgba(217, 195, 161, 0.28)',
         },

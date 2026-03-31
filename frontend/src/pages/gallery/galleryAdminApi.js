@@ -20,20 +20,35 @@ function buildGalleryAssetUrl(slug, assetPath) {
   const baseUrl = trimSlashes(getR2BaseUrl());
   const eventSlug = trimSlashes(slug);
   const filePath = trimSlashes(rawPath);
+  const normalizedPath = eventSlug && filePath.startsWith(`${eventSlug}/`) ? filePath : eventSlug ? `${eventSlug}/${filePath}` : filePath;
 
-  if (!baseUrl || !eventSlug) return filePath;
-  return `${baseUrl}/${eventSlug}/${filePath}`;
+  if (!baseUrl) return normalizedPath;
+  return `${baseUrl}/${normalizedPath}`;
 }
 
 function normalizeImageRecord(record) {
   return {
     id: record.id,
     eventSlug: record.event_slug,
-    imageUrl: record.image_url,
+    imageUrl: buildGalleryAssetUrl(record.event_slug, record.image_url),
     altText: record.alt_text,
     sortOrder: record.sort_order,
     isPreview: record.is_preview,
   };
+}
+
+/**
+ * Uploads a file to the event's folder in object storage.
+ * Returns { filename } on success.
+ */
+export async function uploadGalleryFile(apiFetch, slug, file) {
+  const form = new FormData();
+  form.append('file', file, file.name);
+  const response = await apiFetch(`/gallery/${encodeURIComponent(slug)}/upload`, {
+    method: 'POST',
+    body: form,
+  });
+  return readJson(response, 'Unable to upload file.');
 }
 
 /**
@@ -88,21 +103,10 @@ export async function deleteGalleryImage(apiFetch, slug, id) {
 }
 
 /**
- * Loads all gallery images for one event (uses the public detail endpoint).
+ * Loads all gallery images for one event via the staff endpoint, returning real DB ids.
  */
-export async function fetchAdminEventImages(slug) {
-  const response = await fetch(`/api/gallery/${encodeURIComponent(slug)}`);
-  const payload = await readJson(response, 'Unable to load event images.');
-  const all = [
-    ...(payload.preview_images || []).map((img) => ({ ...img, is_preview: true })),
-    ...(payload.gallery_images || []).map((img) => ({ ...img, is_preview: false })),
-  ];
-  return all.map((img, index) => ({
-    id: index,
-    eventSlug: slug,
-    imageUrl: img.src,
-    altText: img.alt,
-    sortOrder: index,
-    isPreview: img.is_preview,
-  }));
+export async function fetchAdminEventImages(apiFetch, slug) {
+  const response = await apiFetch(`/gallery/${encodeURIComponent(slug)}/images`);
+  const records = await readJson(response, 'Unable to load event images.');
+  return records.map((record) => normalizeImageRecord(record));
 }

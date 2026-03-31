@@ -148,13 +148,13 @@ function Gallery() {
         <Grid container spacing={3}>
           {galleryEvents.map((event) => (
             <Grid key={event.slug} size={{ xs: 12 }}>
-              <SurfaceCard cardSx={{ overflow: 'hidden' }} contentSx={{ p: 0 }}>
+              <SurfaceCard cardSx={{ overflow: 'hidden' }} contentSx={{ p: 0, '&:last-child': { pb: 0 } }}>
                 <Grid container>
-                  <Grid size={{ xs: 12, md: 6 }} sx={{ position: 'relative', minHeight: 280 }}>
+                  <Grid size={{ xs: 12, md: 6 }} sx={{ position: 'relative', aspectRatio: '4/3' }}>
                     <FadeInImage
                       src={event.coverImage}
                       alt={event.title}
-                      sx={{ position: 'absolute', inset: 0 }}
+                      sx={{ position: 'absolute', inset: 0, aspectRatio: 'unset' }}
                     />
                   </Grid>
                   <Grid size={{ xs: 12, md: 6 }}>
