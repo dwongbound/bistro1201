@@ -12,14 +12,14 @@ const teamPhoto = (filename) => (r2 ? `${r2}/team/${filename}` : '');
 const teamMembers = [
   {
     name: 'Dylan Wong',
-    role: 'Executive Chef',
+    role: 'Executive Chef\nCo-Founder',
     bio: 'Shapes the seasonal menus, leads the kitchen, and sets the tone for each supper club evening.',
     image: teamPhoto('dylan.JPG'),
     imageAlt: 'Portrait of Dylan',
   },
   {
     name: 'Noah Somphone',
-    role: 'Chief Operating Officer',
+    role: 'Chief Operating Officer\nCo-Founder',
     bio: 'Makes bread and stuff',
     image: teamPhoto('noah.JPG'),
     imageAlt: 'Portrait of Noah',
@@ -113,7 +113,7 @@ function Team() {
       <Grid container spacing={3}>
         {teamMembers.map((member) => (
           <Grid key={member.name} size={{ xs: 6, md: 3 }}>
-            <SurfaceCard cardSx={{ height: '100%', overflow: 'hidden' }} contentSx={{ p: 0 }}>
+            <SurfaceCard cardSx={{ height: '100%', overflow: 'hidden', background: 'transparent' }} contentSx={{ p: 0 }}>
               <Stack spacing={2}>
                 <FadeInImage
                   src={member.image}

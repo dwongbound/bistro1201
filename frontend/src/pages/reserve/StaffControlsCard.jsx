@@ -1,5 +1,3 @@
-import LockRoundedIcon from '@mui/icons-material/LockRounded';
-import PhotoLibraryRoundedIcon from '@mui/icons-material/PhotoLibraryRounded';
 import {
   Alert,
   Box,
@@ -16,6 +14,7 @@ import {
 import { useEffect, useState } from 'react';
 import SurfaceCard from '../../common/SurfaceCard';
 import StyledDateInput from '../../common/StyledDateInput';
+import { CHIP_BORDER_RADIUS } from '../../common/theme';
 import { formatHumanDate, formatHumanTime } from './reserve';
 
 /**
@@ -132,14 +131,11 @@ function StaffControlsCard({
 
   return (
     <SurfaceCard contentSx={{ p: { xs: 2.5, sm: 3 } }}>
-      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
-        <LockRoundedIcon color="secondary" />
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            1201 Team Access
-          </Typography>
-        </Box>
-      </Stack>
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+          1201 Team Access
+        </Typography>
+      </Box>
 
       {staffStatus.message ? (
         <Alert severity={staffStatus.type === 'error' ? 'error' : 'success'} sx={{ mb: 2 }}>
@@ -169,7 +165,7 @@ function StaffControlsCard({
                       py: 1,
                       minHeight: 40,
                       border: '1px solid rgba(217, 195, 161, 0.22)',
-                      borderRadius: 1.5,
+                      borderRadius: `${CHIP_BORDER_RADIUS}px`,
                       backgroundColor: 'rgba(255, 255, 255, 0.03)',
                     }}
                   >
@@ -339,7 +335,6 @@ function StaffControlsCard({
             component="a"
             href="/staff/gallery"
             variant="outlined"
-            startIcon={<PhotoLibraryRoundedIcon />}
             fullWidth={isMobile}
           >
             Gallery Admin

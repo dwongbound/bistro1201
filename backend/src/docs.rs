@@ -41,12 +41,12 @@ impl Modify for SecurityAddon {
         crate::handlers::get_access_codes,
         crate::handlers::create_access_code,
         crate::handlers::delete_access_code,
-        crate::handlers::get_gallery_events,
-        crate::handlers::get_gallery_event,
-        crate::handlers::create_gallery_event,
-        crate::handlers::delete_gallery_event_handler,
-        crate::handlers::create_gallery_image,
-        crate::handlers::delete_gallery_image_handler
+        crate::gallery_handlers::get_gallery_events,
+        crate::gallery_handlers::get_gallery_event,
+        crate::gallery_handlers::create_gallery_event,
+        crate::gallery_handlers::delete_gallery_event_handler,
+        crate::gallery_handlers::create_gallery_image,
+        crate::gallery_handlers::delete_gallery_image_handler
     ),
     components(
         schemas(

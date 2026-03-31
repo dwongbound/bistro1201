@@ -1,9 +1,6 @@
-import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
-import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
-import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
-import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
-import { Box, Button, IconButton, MenuItem, Popover, Stack, TextField, Typography } from '@mui/material';
+import { Box, Button, MenuItem, Popover, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
+import { BORDER_RADIUS } from './theme';
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const TIME_HOURS = Array.from({ length: 12 }, (_, index) => `${index + 1}`);
@@ -257,7 +254,7 @@ function StyledDateInput({
           py: fullWidth ? 1.75 : 1.25,
           border: '1px solid',
           borderColor: 'rgba(217, 195, 161, 0.28)',
-          borderRadius: fullWidth ? 999 : 3,
+          borderRadius: `${BORDER_RADIUS}px`,
           backgroundColor: 'rgba(255, 255, 255, 0.02)',
           cursor: 'pointer',
           transition: 'border-color 140ms ease, transform 140ms ease, background-color 140ms ease',
@@ -272,20 +269,17 @@ function StyledDateInput({
           },
         }}
       >
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <CalendarMonthRoundedIcon color="secondary" />
-          <Typography
-            sx={{
-              flexGrow: 1,
-              fontSize: fullWidth ? '1.05rem' : '0.98rem',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {displayValue}
-          </Typography>
-        </Stack>
+        <Typography
+          sx={{
+            flexGrow: 1,
+            fontSize: fullWidth ? '1.05rem' : '0.98rem',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {displayValue}
+        </Typography>
       </Box>
       <input type="hidden" name={name} value={value} readOnly />
       {helperText ? <Typography color="text.secondary">{helperText}</Typography> : null}
@@ -303,7 +297,7 @@ function StyledDateInput({
               width: 340,
               maxWidth: 'calc(100vw - 32px)',
               p: 2,
-              borderRadius: 1.5,
+              borderRadius: `${BORDER_RADIUS}px`,
               border: '1px solid rgba(217, 195, 161, 0.2)',
               background:
                 'linear-gradient(180deg, rgba(36, 28, 22, 0.98) 0%, rgba(24, 18, 14, 0.98) 100%)',
@@ -321,21 +315,23 @@ function StyledDateInput({
                 year: 'numeric',
               })}
             </Typography>
-            <Stack direction="row" spacing={0.5}>
-              <IconButton
+            <Stack direction="row" spacing={0.75}>
+              <Button
                 size="small"
+                variant="text"
                 onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}
-                sx={{ color: 'inherit' }}
+                sx={{ minWidth: 0, px: 1.25, color: 'inherit' }}
               >
-                <ChevronLeftRoundedIcon />
-              </IconButton>
-              <IconButton
+                Prev
+              </Button>
+              <Button
                 size="small"
+                variant="text"
                 onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}
-                sx={{ color: 'inherit' }}
+                sx={{ minWidth: 0, px: 1.25, color: 'inherit' }}
               >
-                <ChevronRightRoundedIcon />
-              </IconButton>
+                Next
+              </Button>
             </Stack>
           </Stack>
 
@@ -376,7 +372,7 @@ function StyledDateInput({
                     height: 38,
                     border: '1px solid',
                     borderColor: isSelected ? 'secondary.main' : isAvailable ? 'rgba(214, 166, 90, 0.45)' : 'rgba(217, 195, 161, 0.18)',
-                    borderRadius: 2,
+                    borderRadius: `${BORDER_RADIUS}px`,
                     backgroundColor: isSelected ? 'secondary.main' : isAvailable ? 'rgba(176, 122, 68, 0.18)' : 'rgba(255, 255, 255, 0.02)',
                     color: isSelected ? '#1a130d' : isCurrentMonth ? 'common.white' : 'rgba(244, 232, 214, 0.45)',
                     fontWeight: isSelected || isAvailable ? 700 : 500,
@@ -412,10 +408,7 @@ function StyledDateInput({
 
           {mode === 'datetime' ? (
             <Stack spacing={1}>
-              <Typography sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <AccessTimeRoundedIcon fontSize="small" color="secondary" />
-                Expiration Time
-              </Typography>
+              <Typography sx={{ fontWeight: 600 }}>Expiration Time</Typography>
               <Stack direction="row" spacing={1}>
                 <TextField
                   select
@@ -505,7 +498,7 @@ const timeSelectSx = {
     color: 'secondary.main',
   },
   '& .MuiOutlinedInput-root': {
-    borderRadius: 2,
+    borderRadius: `${BORDER_RADIUS}px`,
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
     color: 'common.white',
     '& fieldset': {

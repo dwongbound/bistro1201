@@ -1,8 +1,7 @@
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
-import { Alert, Box, Button, Chip, CircularProgress, Grid, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, CircularProgress, Stack, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
-import FadeInImage from '../../common/FadeInImage';
 import PageIntro from '../../common/PageIntro';
 import SurfaceCard from '../../common/SurfaceCard';
 import { fetchGalleryEvent } from './galleryApi';
@@ -119,15 +118,34 @@ function GalleryEventDetail() {
       {event.galleryImages.length === 0 ? (
         <Alert severity="info">No gallery images have been added to this event yet.</Alert>
       ) : (
-        <Grid container spacing={3}>
+        <Box
+          sx={{
+            columnCount: { xs: 1, sm: 2, md: 3 },
+            columnGap: '12px',
+          }}
+        >
           {event.galleryImages.map((image) => (
-            <Grid key={`${image.src}-${image.alt}`} size={{ xs: 12, sm: 6 }}>
-              <SurfaceCard cardSx={{ overflow: 'hidden' }} contentSx={{ p: 0 }}>
-                <FadeInImage src={image.src} alt={image.alt} sx={{ aspectRatio: '4/3' }} />
-              </SurfaceCard>
-            </Grid>
+            <Box
+              key={`${image.src}-${image.alt}`}
+              sx={{
+                breakInside: 'avoid',
+                mb: '12px',
+                display: 'block',
+              }}
+            >
+              <Box
+                component="img"
+                src={image.src}
+                alt={image.alt}
+                loading="lazy"
+                sx={{
+                  width: '100%',
+                  display: 'block',
+                }}
+              />
+            </Box>
           ))}
-        </Grid>
+        </Box>
       )}
     </Box>
   );

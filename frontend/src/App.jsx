@@ -34,20 +34,29 @@ import StaffGallery from './pages/gallery/StaffGallery';
  */
 function AppRoutes() {
   const location = useLocation();
+  const isHomeRoute = location.pathname === '/';
+
+  const routes = (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/team" element={<Team />} />
+      <Route path="/gallery" element={<Gallery />} />
+      <Route path="/gallery/:eventSlug" element={<GalleryEventDetail />} />
+      <Route path="/pictures" element={<Gallery />} />
+      <Route path="/scheduling" element={<Scheduling />} />
+      <Route path="/reserve" element={<Scheduling />} />
+      <Route path="/staff/gallery" element={<StaffGallery />} />
+    </Routes>
+  );
+
+  if (isHomeRoute) {
+    return routes;
+  }
 
   return (
     <PageTransition routeKey={location.pathname}>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/team" element={<Team />} />
-        <Route path="/gallery" element={<Gallery />} />
-        <Route path="/gallery/:eventSlug" element={<GalleryEventDetail />} />
-        <Route path="/pictures" element={<Gallery />} />
-        <Route path="/scheduling" element={<Scheduling />} />
-        <Route path="/reserve" element={<Scheduling />} />
-        <Route path="/staff/gallery" element={<StaffGallery />} />
-      </Routes>
+      {routes}
     </PageTransition>
   );
 }
