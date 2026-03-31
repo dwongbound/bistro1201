@@ -152,10 +152,9 @@ describe('StaffGallery', () => {
     await user.click(screen.getByTestId('event-row'));
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/^Image File/i)).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: /preview/i })).toBeInTheDocument();
     });
-    expect(screen.getByLabelText(/^Alt Text/i)).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: /preview/i })).toBeInTheDocument();
+    expect(screen.getByText(/Tap to pick photos — select multiple at once/i)).toBeInTheDocument();
   });
 
   test('clicking the delete icon opens a confirmation dialog', async () => {

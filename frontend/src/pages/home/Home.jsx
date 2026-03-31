@@ -29,12 +29,6 @@ function Home() {
     fetchGalleryEvent('home')
       .then((event) => setSlides(event.galleryImages))
       .catch(() => {});
-
-    const timeoutId = window.setTimeout(() => {
-      setVisible(true);
-    }, FADE_IN_DELAY_MS);
-
-    return () => window.clearTimeout(timeoutId);
   }, []);
 
   useEffect(() => {
@@ -79,6 +73,25 @@ function Home() {
     };
   }, [slides]);
 
+  useEffect(() => {
+    if (!slides.length) {
+      setVisible(true);
+      return;
+    }
+
+    const firstSlideSrc = slides[0]?.src;
+    if (!firstSlideSrc || !loadedSlides.has(firstSlideSrc)) {
+      setVisible(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setVisible(true);
+    }, FADE_IN_DELAY_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadedSlides, slides]);
+
   return (
     <>
       {/* Fixed full-screen slideshow. zIndex:1 places it above the body/html background. */}
@@ -94,6 +107,8 @@ function Home() {
         {slides.map((slide, i) => (
           <Box
             key={slide.src}
+            data-testid={`home-slide-${i}`}
+            data-slide-src={slide.src}
             sx={{
               position: 'absolute',
               inset: 0,

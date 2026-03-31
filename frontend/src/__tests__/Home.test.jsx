@@ -8,8 +8,41 @@ jest.mock('../pages/gallery/galleryApi', () => ({
 }));
 
 describe('Home', () => {
+  let OriginalImage;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    OriginalImage = global.Image;
+    global.Image = class MockImage {
+      constructor() {
+        this._src = '';
+        this.complete = false;
+        this.naturalWidth = 0;
+        this.listeners = {};
+      }
+
+      addEventListener(type, callback) {
+        this.listeners[type] = callback;
+      }
+
+      removeEventListener(type) {
+        delete this.listeners[type];
+      }
+
+      set src(value) {
+        this._src = value;
+        this.complete = true;
+        this.naturalWidth = 1200;
+        if (this.listeners.load) {
+          this.listeners.load();
+        }
+      }
+
+      get src() {
+        return this._src;
+      }
+    };
+
     fetchGalleryEvent.mockResolvedValue({
       slug: 'home',
       title: 'Home Slideshow',
@@ -20,6 +53,10 @@ describe('Home', () => {
         },
       ],
     });
+  });
+
+  afterEach(() => {
+    global.Image = OriginalImage;
   });
 
   test('loads slideshow images from the home gallery event and renders the slide background', async () => {
@@ -34,11 +71,9 @@ describe('Home', () => {
     });
 
     await waitFor(() => {
-      const slide = Array.from(container.querySelectorAll('div')).find((node) =>
-        node.style.backgroundImage.includes('hero-home.jpg'),
-      );
+      const slide = container.querySelector('[data-slide-src="https://cdn.1201bistrocafe.com/home/hero-home.jpg"]');
       expect(slide).toBeTruthy();
-      expect(slide.style.backgroundImage).toContain('https://cdn.1201bistrocafe.com/home/hero-home.jpg');
+      expect(slide).toHaveAttribute('data-testid', 'home-slide-0');
     });
   });
 });
