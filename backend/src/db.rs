@@ -191,6 +191,7 @@ pub(crate) async fn fetch_gallery_event_summaries(pool: &PgPool) -> Result<Vec<G
     let event_rows = sqlx::query_as::<_, GalleryEventRow>(
         "SELECT slug, title, date_label, summary, event_type, cover_image_url
          FROM gallery_events
+         WHERE slug != 'home'
          ORDER BY sort_order, created_at DESC, slug",
     )
     .fetch_all(pool)
@@ -567,6 +568,22 @@ pub(crate) async fn insert_gallery_image(
     .bind(sort_order)
     .bind(is_preview)
     .fetch_one(pool)
+    .await
+}
+
+/// Returns all image records for one event with their real database ids (used by the staff admin).
+pub(crate) async fn fetch_gallery_images_for_event(
+    pool: &PgPool,
+    event_slug: &str,
+) -> Result<Vec<GalleryImageRecord>> {
+    sqlx::query_as::<_, GalleryImageRecord>(
+        "SELECT id, event_slug, image_url, alt_text, sort_order, is_preview
+         FROM gallery_images
+         WHERE event_slug = $1
+         ORDER BY sort_order, id",
+    )
+    .bind(event_slug)
+    .fetch_all(pool)
     .await
 }
 

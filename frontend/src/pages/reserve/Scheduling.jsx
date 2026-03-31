@@ -375,26 +375,51 @@ function Scheduling() {
       return;
     }
 
-    const rememberedCode = readGuestAccessCode();
-    if (!rememberedCode) {
+    const rememberedGuestCode = readGuestAccessCode();
+    const rememberedStaffCode = readStaffAccessCode();
+
+    if (!rememberedGuestCode && !rememberedStaffCode) {
       setGuestCookieChecked(true);
+      setStaffCookieChecked(true);
       return;
     }
 
-    const reauthenticateWithCookie = async () => {
-      const loginSucceeded = await submitAccessCode({
-        submittedCode: rememberedCode,
+    const bootstrapWithRememberedCodes = async () => {
+      if (rememberedStaffCode) {
+        const staffLoginSucceeded = await submitAccessCode({
+          submittedCode: rememberedStaffCode,
+          upgradeToStaff: true,
+          persistStaffCookie: true,
+          showErrors: false,
+        });
+
+        if (staffLoginSucceeded) {
+          setGuestCookieChecked(true);
+          return;
+        }
+
+        clearStaffAccessCode();
+      }
+
+      if (!rememberedGuestCode) {
+        setGuestCookieChecked(true);
+        setStaffCookieChecked(true);
+        return;
+      }
+
+      const guestLoginSucceeded = await submitAccessCode({
+        submittedCode: rememberedGuestCode,
         persistGuestCookie: true,
         showErrors: false,
       });
 
-      if (!loginSucceeded) {
+      if (!guestLoginSucceeded) {
         clearGuestAccessCode();
         setGuestCookieChecked(true);
       }
     };
 
-    reauthenticateWithCookie();
+    bootstrapWithRememberedCodes();
   }, [auth.token, guestCookieChecked]);
 
   useEffect(() => {

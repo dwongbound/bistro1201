@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { readGuestAccessCode, readStaffAccessCode } from '../common/reserveAccessCookie';
 import { formatHumanDate, formatHumanTime } from '../pages/reserve/reserve';
@@ -67,6 +67,20 @@ function addMonths(months) {
   return formatTestDate(date);
 }
 
+async function submitGuestAccessCode(user, code) {
+  await act(async () => {
+    await user.type(screen.getByPlaceholderText('Access Code'), code);
+    await user.click(screen.getByText('Submit'));
+  });
+}
+
+async function unlockStaffControls(user, code = 'service1201') {
+  await act(async () => {
+    await user.type(screen.getByPlaceholderText('Staff Access Code'), code);
+    await user.click(screen.getByText('Unlock Staff Controls'));
+  });
+}
+
 describe('Scheduling Component', () => {
   beforeEach(() => {
     fetch.mockReset();
@@ -105,8 +119,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(screen.getByText('Reserve an Evening')).toBeInTheDocument();
@@ -144,8 +157,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(screen.getByText('Reserve an Evening')).toBeInTheDocument();
@@ -212,8 +224,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'wrongpassword');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'wrongpassword');
 
     await waitFor(() => {
       expect(screen.getByText('Invalid access code')).toBeInTheDocument();
@@ -255,8 +266,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(screen.getByText('Guest Reservation')).toBeInTheDocument();
@@ -347,8 +357,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(screen.getByText('Guest Reservation')).toBeInTheDocument();
@@ -422,8 +431,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(screen.getByText('Guest Reservation')).toBeInTheDocument();
@@ -506,15 +514,13 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();
     });
 
-    await user.type(screen.getByPlaceholderText('Staff Access Code'), 'service1201');
-    await user.click(screen.getByText('Unlock Staff Controls'));
+    await unlockStaffControls(user);
 
     await waitFor(() => {
       expect(fetch).toHaveBeenNthCalledWith(4, '/api/auth/login', {
@@ -592,15 +598,13 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();
     });
 
-    await user.type(screen.getByPlaceholderText('Staff Access Code'), 'service1201');
-    await user.click(screen.getByText('Unlock Staff Controls'));
+    await unlockStaffControls(user);
 
     await waitFor(() => {
       expect(screen.getByText('Add Slot')).toBeInTheDocument();
@@ -614,18 +618,6 @@ describe('Scheduling Component', () => {
     document.cookie = 'bistro_guest_access_code=bistro1201; Path=/';
     document.cookie = 'bistro_staff_access_code=service1201; Path=/';
     fetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ token: 'guest-token', role: 'guest' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [],
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [{ date: openDate, dinner_time: '19:00' }],
-      })
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ token: 'staff-token', role: 'staff' }),
@@ -650,13 +642,9 @@ describe('Scheduling Component', () => {
       expect(fetch).toHaveBeenNthCalledWith(1, '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: 'bistro1201' }),
-      });
-      expect(fetch).toHaveBeenNthCalledWith(4, '/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: 'service1201' }),
       });
+      expect(fetch).toHaveBeenCalledTimes(4);
     });
   });
 
@@ -665,6 +653,10 @@ describe('Scheduling Component', () => {
     document.cookie = 'bistro_guest_access_code=bistro1201; Path=/';
     document.cookie = 'bistro_staff_access_code=expired-staff; Path=/';
     fetch
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: 'Invalid access code' }),
+      })
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ token: 'guest-token', role: 'guest' }),
@@ -676,10 +668,6 @@ describe('Scheduling Component', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => [{ date: openDate, dinner_time: '19:00' }],
-      })
-      .mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({ error: 'Invalid access code' }),
       });
 
     render(<Scheduling />);
@@ -687,6 +675,16 @@ describe('Scheduling Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();
       expect(fetch).toHaveBeenCalledTimes(4);
+      expect(fetch).toHaveBeenNthCalledWith(1, '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: 'expired-staff' }),
+      });
+      expect(fetch).toHaveBeenNthCalledWith(2, '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: 'bistro1201' }),
+      });
     });
 
     await waitFor(() => {
@@ -738,15 +736,13 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();
     });
 
-    await user.type(screen.getByPlaceholderText('Staff Access Code'), 'service1201');
-    await user.click(screen.getByText('Unlock Staff Controls'));
+    await unlockStaffControls(user);
 
     await user.click(screen.getByRole('button', { name: 'Tuesday, March 24' }));
 
@@ -816,15 +812,13 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();
     });
 
-    await user.type(screen.getByPlaceholderText('Staff Access Code'), 'service1201');
-    await user.click(screen.getByText('Unlock Staff Controls'));
+    await unlockStaffControls(user);
 
     await user.click(screen.getByRole('button', { name: 'Tuesday, March 24' }));
 
@@ -909,15 +903,13 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();
     });
 
-    await user.type(screen.getByPlaceholderText('Staff Access Code'), 'service1201');
-    await user.click(screen.getByText('Unlock Staff Controls'));
+    await unlockStaffControls(user);
 
     await user.click(screen.getByRole('button', { name: 'Tuesday, March 24' }));
 
@@ -1008,15 +1000,13 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();
     });
 
-    await user.type(screen.getByPlaceholderText('Staff Access Code'), 'service1201');
-    await user.click(screen.getByText('Unlock Staff Controls'));
+    await unlockStaffControls(user);
 
     await waitFor(() => {
       expect(screen.getByText('Guest Access Codes')).toBeInTheDocument();
@@ -1086,8 +1076,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(getInputByName('date')).toHaveValue(today);
@@ -1113,8 +1102,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(getInputByName('date')).toHaveValue(today);
@@ -1146,8 +1134,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(getInputByName('date')).toHaveValue(today);
@@ -1186,8 +1173,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(getInputByName('date')).toHaveValue(today);
@@ -1231,8 +1217,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(getInputByName('date')).toHaveValue('2026-03-15');
@@ -1268,8 +1253,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(getInputByName('date')).toHaveValue('2026-03-15');
@@ -1315,8 +1299,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(screen.getByText('March 2026')).toBeInTheDocument();
@@ -1387,15 +1370,13 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await user.type(screen.getByPlaceholderText('Access Code'), 'bistro1201');
-    await user.click(screen.getByText('Submit'));
+    await submitGuestAccessCode(user, 'bistro1201');
 
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();
     });
 
-    await user.type(screen.getByPlaceholderText('Staff Access Code'), 'service1201');
-    await user.click(screen.getByText('Unlock Staff Controls'));
+    await unlockStaffControls(user);
 
     await user.click(screen.getByRole('button', { name: 'Tuesday, March 24' }));
 

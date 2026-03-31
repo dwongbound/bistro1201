@@ -1,4 +1,3 @@
-import LockRoundedIcon from '@mui/icons-material/LockRounded';
 import { Alert, Button, Chip, Grid, Stack, TextField, Typography } from '@mui/material';
 import SurfaceCard from '../../common/SurfaceCard';
 
@@ -19,7 +18,6 @@ function ReserveAccessGate({ accessCode, authBusy, authStatus, onAccessCodeChang
         >
           <Stack spacing={2}>
             <Chip
-              icon={<LockRoundedIcon />}
               label="Protected Reserve Access"
               sx={{ width: 'fit-content', color: 'inherit', borderColor: 'rgba(255,255,255,0.4)' }}
               variant="outlined"

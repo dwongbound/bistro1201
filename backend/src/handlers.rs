@@ -5,19 +5,17 @@ use axum::{
 };
 
 use crate::db::{
-    create_session, delete_availability_date, delete_gallery_event, delete_gallery_image, delete_guest_access_code,
-    delete_reservation_by_slot, fetch_access_code, fetch_available_dates, fetch_gallery_event_detail,
-    fetch_gallery_event_summaries, fetch_guest_access_codes, fetch_reservations, find_role_for_token,
-    insert_available_date, insert_gallery_event, insert_gallery_image, insert_reservation, parse_expiration_timestamp,
+    create_session, delete_availability_date, delete_guest_access_code, delete_reservation_by_slot,
+    fetch_access_code, fetch_available_dates, fetch_guest_access_codes, fetch_reservations,
+    find_role_for_token, insert_available_date, insert_reservation, parse_expiration_timestamp,
     reservation_slot_is_available, resolve_access_code, upsert_access_code,
 };
 use crate::email::{send_cancellation_email, send_confirmation_email};
 use crate::error::{ApiError, ErrorResponse};
 use crate::models::{
-    AccessCodeLookup, AccessCodeRecord, AccessCodeSeed, AccessRole, AvailabilityDate, CreateAccessCodeRequest,
-    CreateGalleryEventRequest, CreateGalleryImageRequest, CreateReservationResponse, DeleteAvailabilityParams,
-    DeleteAvailabilityResponse, DeleteGalleryEventResponse, DeleteGalleryImageResponse, DeleteReservationParams,
-    DeleteReservationResponse, GalleryEventDetail, GalleryEventSummary, GalleryImageRecord, LoginRequest,
+    AccessCodeLookup, AccessCodeRecord, AccessCodeSeed, AccessRole, AvailabilityDate,
+    CreateAccessCodeRequest, CreateReservationResponse, DeleteAvailabilityParams,
+    DeleteAvailabilityResponse, DeleteReservationParams, DeleteReservationResponse, LoginRequest,
     LoginResponse, Reservation, GUEST_ROLE,
 };
 use crate::state::AppState;
@@ -46,54 +44,6 @@ pub(crate) async fn root() -> &'static str {
 )]
 pub(crate) async fn health() -> &'static str {
     "ok"
-}
-
-/// Returns every gallery event summary for the public gallery index.
-#[utoipa::path(
-    get,
-    path = "/api/gallery",
-    tag = "gallery",
-    responses(
-        (status = 200, description = "Gallery event summaries", body = [GalleryEventSummary]),
-        (status = 500, description = "Backend error", body = ErrorResponse)
-    )
-)]
-pub(crate) async fn get_gallery_events(
-    State(state): State<AppState>,
-) -> std::result::Result<Json<Vec<GalleryEventSummary>>, ApiError> {
-    let events = fetch_gallery_event_summaries(&state.db).await.map_err(|error| {
-        tracing::error!(?error, "Failed to load gallery events");
-        ApiError::internal("Unable to load gallery")
-    })?;
-    Ok(Json(events))
-}
-
-/// Returns one public gallery event by slug for the detail page.
-#[utoipa::path(
-    get,
-    path = "/api/gallery/{slug}",
-    tag = "gallery",
-    params(
-        ("slug" = String, Path, description = "Gallery event slug")
-    ),
-    responses(
-        (status = 200, description = "Full gallery event detail", body = GalleryEventDetail),
-        (status = 404, description = "Gallery event not found", body = ErrorResponse),
-        (status = 500, description = "Backend error", body = ErrorResponse)
-    )
-)]
-pub(crate) async fn get_gallery_event(
-    State(state): State<AppState>,
-    Path(slug): Path<String>,
-) -> std::result::Result<Json<GalleryEventDetail>, ApiError> {
-    let event = fetch_gallery_event_detail(&state.db, slug.trim())
-        .await
-        .map_err(|error| {
-            tracing::error!(?error, "Failed to load gallery event");
-            ApiError::internal("Unable to load gallery event")
-        })?
-        .ok_or_else(|| ApiError::not_found("Gallery event was not found"))?;
-    Ok(Json(event))
 }
 
 /// Issues a bearer token when a submitted access code matches a configured role.
@@ -540,7 +490,7 @@ pub(crate) async fn delete_access_code(
 }
 
 /// Verifies the bearer token on a request and enforces the required access role.
-async fn require_role(
+pub(crate) async fn require_role(
     state: &AppState,
     headers: &HeaderMap,
     required_role: AccessRole,
@@ -565,157 +515,4 @@ async fn require_role(
 fn bearer_token(headers: &HeaderMap) -> Option<&str> {
     let value = headers.get(axum::http::header::AUTHORIZATION)?.to_str().ok()?;
     value.strip_prefix("Bearer ")
-}
-
-/// Creates a gallery event and requires staff access.
-#[utoipa::path(
-    post,
-    path = "/api/gallery",
-    tag = "gallery",
-    security(("bearer_auth" = [])),
-    request_body = CreateGalleryEventRequest,
-    responses(
-        (status = 200, description = "Gallery event created", body = GalleryEventSummary),
-        (status = 400, description = "Invalid payload or duplicate slug", body = ErrorResponse),
-        (status = 401, description = "Missing or invalid token", body = ErrorResponse),
-        (status = 403, description = "Insufficient permissions", body = ErrorResponse),
-        (status = 500, description = "Backend error", body = ErrorResponse)
-    )
-)]
-pub(crate) async fn create_gallery_event(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Json(payload): Json<CreateGalleryEventRequest>,
-) -> std::result::Result<Json<GalleryEventSummary>, ApiError> {
-    require_role(&state, &headers, AccessRole::Staff).await?;
-    if payload.slug.trim().is_empty() {
-        return Err(ApiError::bad_request("Slug is required"));
-    }
-    if payload.title.trim().is_empty() {
-        return Err(ApiError::bad_request("Title is required"));
-    }
-    if payload.cover_image_url.trim().is_empty() {
-        return Err(ApiError::bad_request("Cover image URL is required"));
-    }
-
-    let event = insert_gallery_event(&state.db, &payload).await.map_err(|error| {
-        if let Some(db_err) = error.as_database_error() {
-            if db_err.code().as_deref() == Some("23505") {
-                return ApiError::bad_request("A gallery event with that slug already exists");
-            }
-        }
-        tracing::error!(?error, "Failed to create gallery event");
-        ApiError::internal("Unable to create gallery event")
-    })?;
-    Ok(Json(event))
-}
-
-/// Deletes a gallery event (and its images) and requires staff access.
-#[utoipa::path(
-    delete,
-    path = "/api/gallery/{slug}",
-    tag = "gallery",
-    security(("bearer_auth" = [])),
-    params(("slug" = String, Path, description = "Gallery event slug")),
-    responses(
-        (status = 200, description = "Gallery event deleted", body = DeleteGalleryEventResponse),
-        (status = 404, description = "Gallery event not found", body = ErrorResponse),
-        (status = 401, description = "Missing or invalid token", body = ErrorResponse),
-        (status = 403, description = "Insufficient permissions", body = ErrorResponse),
-        (status = 500, description = "Backend error", body = ErrorResponse)
-    )
-)]
-pub(crate) async fn delete_gallery_event_handler(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Path(slug): Path<String>,
-) -> std::result::Result<Json<DeleteGalleryEventResponse>, ApiError> {
-    require_role(&state, &headers, AccessRole::Staff).await?;
-    let removed = delete_gallery_event(&state.db, slug.trim())
-        .await
-        .map_err(|error| {
-            tracing::error!(?error, "Failed to delete gallery event");
-            ApiError::internal("Unable to delete gallery event")
-        })?
-        .ok_or_else(|| ApiError::not_found("Gallery event was not found"))?;
-    Ok(Json(removed))
-}
-
-/// Adds an image to a gallery event and requires staff access.
-#[utoipa::path(
-    post,
-    path = "/api/gallery/{slug}/images",
-    tag = "gallery",
-    security(("bearer_auth" = [])),
-    params(("slug" = String, Path, description = "Gallery event slug")),
-    request_body = CreateGalleryImageRequest,
-    responses(
-        (status = 200, description = "Gallery image added", body = GalleryImageRecord),
-        (status = 400, description = "Invalid payload", body = ErrorResponse),
-        (status = 404, description = "Gallery event not found", body = ErrorResponse),
-        (status = 401, description = "Missing or invalid token", body = ErrorResponse),
-        (status = 403, description = "Insufficient permissions", body = ErrorResponse),
-        (status = 500, description = "Backend error", body = ErrorResponse)
-    )
-)]
-pub(crate) async fn create_gallery_image(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Path(slug): Path<String>,
-    Json(payload): Json<CreateGalleryImageRequest>,
-) -> std::result::Result<Json<GalleryImageRecord>, ApiError> {
-    require_role(&state, &headers, AccessRole::Staff).await?;
-    if payload.image_url.trim().is_empty() {
-        return Err(ApiError::bad_request("Image URL is required"));
-    }
-    if payload.alt_text.trim().is_empty() {
-        return Err(ApiError::bad_request("Alt text is required"));
-    }
-
-    let image = insert_gallery_image(&state.db, slug.trim(), &payload)
-        .await
-        .map_err(|error| {
-            if let Some(db_err) = error.as_database_error() {
-                if db_err.code().as_deref() == Some("23503") {
-                    return ApiError::not_found("Gallery event was not found");
-                }
-            }
-            tracing::error!(?error, "Failed to add gallery image");
-            ApiError::internal("Unable to add gallery image")
-        })?;
-    Ok(Json(image))
-}
-
-/// Deletes one gallery image and requires staff access.
-#[utoipa::path(
-    delete,
-    path = "/api/gallery/{slug}/images/{id}",
-    tag = "gallery",
-    security(("bearer_auth" = [])),
-    params(
-        ("slug" = String, Path, description = "Gallery event slug"),
-        ("id" = i64, Path, description = "Gallery image id")
-    ),
-    responses(
-        (status = 200, description = "Gallery image deleted", body = DeleteGalleryImageResponse),
-        (status = 404, description = "Gallery image not found", body = ErrorResponse),
-        (status = 401, description = "Missing or invalid token", body = ErrorResponse),
-        (status = 403, description = "Insufficient permissions", body = ErrorResponse),
-        (status = 500, description = "Backend error", body = ErrorResponse)
-    )
-)]
-pub(crate) async fn delete_gallery_image_handler(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Path((slug, id)): Path<(String, i64)>,
-) -> std::result::Result<Json<DeleteGalleryImageResponse>, ApiError> {
-    require_role(&state, &headers, AccessRole::Staff).await?;
-    let removed = delete_gallery_image(&state.db, slug.trim(), id)
-        .await
-        .map_err(|error| {
-            tracing::error!(?error, "Failed to delete gallery image");
-            ApiError::internal("Unable to delete gallery image")
-        })?
-        .ok_or_else(|| ApiError::not_found("Gallery image was not found"))?;
-    Ok(Json(removed))
 }

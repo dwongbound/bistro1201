@@ -1,4 +1,3 @@
-import RestaurantRoundedIcon from '@mui/icons-material/RestaurantRounded';
 import { Button, Chip, Stack, TextField, Typography } from '@mui/material';
 import SurfaceCard from '../../common/SurfaceCard';
 import StyledDateInput from '../../common/StyledDateInput';
@@ -22,12 +21,9 @@ function GuestReservationCard({
 }) {
   return (
     <SurfaceCard contentSx={{ p: { xs: 2.5, sm: 3 } }}>
-      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
-        <RestaurantRoundedIcon color="secondary" />
-        <Typography variant="h5" sx={{ fontWeight: 700 }}>
-          Guest Reservation
-        </Typography>
-      </Stack>
+      <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
+        Guest Reservation
+      </Typography>
       <Stack component="form" onSubmit={onSubmit} spacing={2.5}>
         <StyledDateInput
           id="reservation-date"
