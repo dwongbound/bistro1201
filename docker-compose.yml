@@ -27,7 +27,7 @@ services:
     depends_on:
       - backend
     environment:
-      NODE_ENV: ${FRONTEND_NODE_ENV:-development}
+      NODE_ENV: ${FRONTEND_NODE_ENV:-dev}
       APP_INSTANCE: ${APP_INSTANCE:-dev}
       APP_API_BASE_PATH: ${APP_API_BASE_PATH:-/api}
       APP_R2_BASE_URL: ${APP_R2_BASE_URL:-}
