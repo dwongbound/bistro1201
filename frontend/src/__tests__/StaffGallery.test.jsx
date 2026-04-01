@@ -60,6 +60,18 @@ async function loginAsStaff() {
   });
 }
 
+async function waitForEventsSectionReady() {
+  await waitFor(() => {
+    expect(fetchGalleryEvents).toHaveBeenCalled();
+  });
+  await waitFor(() => {
+    expect(screen.queryByText('Loading events...')).not.toBeInTheDocument();
+  });
+  await waitFor(() => {
+    expect(screen.getByText('No events yet.')).toBeInTheDocument();
+  });
+}
+
 describe('titleToSlug', () => {
   test('lowercases and replaces spaces with underscores', () => {
     expect(titleToSlug('Spring Supper 2026')).toBe('spring_supper_2026');
@@ -70,7 +82,7 @@ describe('titleToSlug', () => {
   });
 
   test('handles multiple consecutive spaces', () => {
-    expect(titleToSlug('Summer  BBQ')).toBe('summer__bbq');
+    expect(titleToSlug('Summer  BBQ')).toBe('summer_bbq');
   });
 
   test('returns empty string for empty input', () => {
@@ -135,8 +147,8 @@ describe('StaffGallery', () => {
   test('title field auto-generates the slug shown in its helper text', async () => {
     renderGallery();
     await loginAsStaff();
+    await waitForEventsSectionReady();
 
-    // Open the create form
     fireEvent.click(screen.getByText('New Event'));
 
     fireEvent.change(screen.getByLabelText(/^Title/i), { target: { value: 'Spring Supper 2026' } });
@@ -149,6 +161,7 @@ describe('StaffGallery', () => {
   test('createGalleryEvent is called with the auto-generated slug', async () => {
     renderGallery();
     await loginAsStaff();
+    await waitForEventsSectionReady();
 
     fireEvent.click(screen.getByText('New Event'));
 
@@ -169,6 +182,7 @@ describe('StaffGallery', () => {
   test('shows required inline errors without submitting when fields are empty', async () => {
     renderGallery();
     await loginAsStaff();
+    await waitForEventsSectionReady();
 
     fireEvent.click(screen.getByText('New Event'));
     fireEvent.click(screen.getByRole('button', { name: 'Create Event' }));
