@@ -1,7 +1,8 @@
 use crate::models::{
     AccessCodeLookup, AccessCodeRecord, AccessCodeSeed, AvailabilityDate, CreateGalleryEventRequest,
     CreateGalleryImageRequest, DeleteGalleryEventResponse, DeleteGalleryImageResponse, GalleryEventDetail,
-    GalleryEventSummary, GalleryImage, GalleryImageRecord, Reservation, GUEST_ROLE, STAFF_ROLE,
+    GalleryEventSummary, GalleryImage, GalleryImageRecord, Reservation, UpdateGalleryEventRequest,
+    UpdateGalleryImageRequest, GUEST_ROLE, STAFF_ROLE,
 };
 use chrono::DateTime;
 use sqlx::postgres::PgPoolOptions;
@@ -508,6 +509,7 @@ pub(crate) async fn insert_gallery_event(
     let sort_order = req.sort_order.unwrap_or(0);
     let created_at = current_timestamp() as i64;
     let event_type = req.event_type.clone().unwrap_or_else(|| "Event".to_string());
+    let cover_image_url = req.cover_image_url.clone().unwrap_or_default();
     sqlx::query(
         "INSERT INTO gallery_events (slug, title, date_label, summary, event_type, cover_image_url, sort_order, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
@@ -517,7 +519,7 @@ pub(crate) async fn insert_gallery_event(
     .bind(&req.date_label)
     .bind(&req.summary)
     .bind(&event_type)
-    .bind(&req.cover_image_url)
+    .bind(&cover_image_url)
     .bind(sort_order)
     .bind(created_at)
     .execute(pool)
@@ -529,9 +531,47 @@ pub(crate) async fn insert_gallery_event(
         date_label: req.date_label.clone(),
         summary: req.summary.clone(),
         event_type,
-        cover_image: req.cover_image_url.clone(),
+        cover_image: cover_image_url,
         preview_images: vec![],
     })
+}
+
+/// Updates editable fields on an existing gallery event and returns the updated summary.
+pub(crate) async fn update_gallery_event(
+    pool: &PgPool,
+    slug: &str,
+    req: &UpdateGalleryEventRequest,
+) -> Result<Option<GalleryEventSummary>> {
+    let row = sqlx::query_as::<_, GalleryEventRow>(
+        "UPDATE gallery_events
+         SET title          = COALESCE($2, title),
+             date_label     = COALESCE($3, date_label),
+             summary        = COALESCE($4, summary),
+             event_type     = COALESCE($5, event_type),
+             cover_image_url = COALESCE($6, cover_image_url),
+             sort_order     = COALESCE($7, sort_order)
+         WHERE slug = $1
+         RETURNING slug, title, date_label, summary, event_type, cover_image_url",
+    )
+    .bind(slug)
+    .bind(&req.title)
+    .bind(&req.date_label)
+    .bind(&req.summary)
+    .bind(&req.event_type)
+    .bind(&req.cover_image_url)
+    .bind(req.sort_order)
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(row.map(|r| GalleryEventSummary {
+        slug: r.slug,
+        title: r.title,
+        date_label: r.date_label,
+        summary: r.summary,
+        event_type: r.event_type,
+        cover_image: r.cover_image_url,
+        preview_images: vec![],
+    }))
 }
 
 /// Deletes a gallery event by slug and returns the slug if it existed.
@@ -584,6 +624,28 @@ pub(crate) async fn fetch_gallery_images_for_event(
     )
     .bind(event_slug)
     .fetch_all(pool)
+    .await
+}
+
+/// Updates sort_order and/or is_preview on one gallery image, returns the updated record.
+pub(crate) async fn update_gallery_image(
+    pool: &PgPool,
+    event_slug: &str,
+    image_id: i64,
+    req: &UpdateGalleryImageRequest,
+) -> Result<Option<GalleryImageRecord>> {
+    sqlx::query_as::<_, GalleryImageRecord>(
+        "UPDATE gallery_images
+         SET sort_order = COALESCE($1, sort_order),
+             is_preview = COALESCE($2, is_preview)
+         WHERE id = $3 AND event_slug = $4
+         RETURNING id, event_slug, image_url, alt_text, sort_order, is_preview",
+    )
+    .bind(req.sort_order)
+    .bind(req.is_preview)
+    .bind(image_id)
+    .bind(event_slug)
+    .fetch_optional(pool)
     .await
 }
 
