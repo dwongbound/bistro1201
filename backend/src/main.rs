@@ -26,7 +26,8 @@ use crate::docs::ApiDoc;
 use crate::email::load_email_config;
 use crate::gallery_handlers::{
     create_gallery_event, create_gallery_image, delete_gallery_event_handler, delete_gallery_image_handler,
-    get_gallery_event, get_gallery_events, list_gallery_images, upload_gallery_file,
+    get_gallery_event, get_gallery_events, list_gallery_images, update_gallery_event_handler,
+    update_gallery_image_handler, upload_gallery_file,
 };
 use crate::handlers::{
     create_access_code, create_available_date, create_reservation, delete_access_code, delete_available_date,
@@ -41,10 +42,10 @@ fn build_app(state: AppState) -> Router {
         .route("/", get(root))
         .route("/health", get(health))
         .route("/api/gallery", get(get_gallery_events).post(create_gallery_event))
-        .route("/api/gallery/:slug", get(get_gallery_event).delete(delete_gallery_event_handler))
+        .route("/api/gallery/:slug", get(get_gallery_event).patch(update_gallery_event_handler).delete(delete_gallery_event_handler))
         .route("/api/gallery/:slug/upload", post(upload_gallery_file).layer(DefaultBodyLimit::max(50 * 1024 * 1024)))
         .route("/api/gallery/:slug/images", get(list_gallery_images).post(create_gallery_image))
-        .route("/api/gallery/:slug/images/:id", delete(delete_gallery_image_handler))
+        .route("/api/gallery/:slug/images/:id", delete(delete_gallery_image_handler).patch(update_gallery_image_handler))
         .route("/api/auth/login", post(login))
         .route("/api/access-codes", get(get_access_codes).post(create_access_code))
         .route("/api/access-codes/:code", delete(delete_access_code))

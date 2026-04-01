@@ -8,13 +8,14 @@ use aws_sdk_s3::primitives::ByteStream;
 use crate::db::{
     delete_gallery_event, delete_gallery_image, fetch_gallery_event_detail,
     fetch_gallery_event_summaries, fetch_gallery_images_for_event, insert_gallery_event,
-    insert_gallery_image,
+    insert_gallery_image, update_gallery_event, update_gallery_image,
 };
 use crate::error::{ApiError, ErrorResponse};
 use crate::handlers::require_role;
 use crate::models::{
     AccessRole, CreateGalleryEventRequest, CreateGalleryImageRequest, DeleteGalleryEventResponse,
     DeleteGalleryImageResponse, GalleryEventDetail, GalleryEventSummary, GalleryImageRecord,
+    UpdateGalleryEventRequest, UpdateGalleryImageRequest,
 };
 use crate::state::AppState;
 
@@ -93,9 +94,6 @@ pub(crate) async fn create_gallery_event(
     if payload.title.trim().is_empty() {
         return Err(ApiError::bad_request("Title is required"));
     }
-    if payload.cover_image_url.trim().is_empty() {
-        return Err(ApiError::bad_request("Cover image URL is required"));
-    }
 
     let event = insert_gallery_event(&state.db, &payload).await.map_err(|error| {
         if let Some(db_err) = error.as_database_error() {
@@ -138,6 +136,24 @@ pub(crate) async fn delete_gallery_event_handler(
         })?
         .ok_or_else(|| ApiError::not_found("Gallery event was not found"))?;
     Ok(Json(removed))
+}
+
+/// Updates editable metadata on a gallery event and requires staff access.
+pub(crate) async fn update_gallery_event_handler(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(slug): Path<String>,
+    Json(payload): Json<UpdateGalleryEventRequest>,
+) -> std::result::Result<Json<GalleryEventSummary>, ApiError> {
+    require_role(&state, &headers, AccessRole::Staff).await?;
+    let updated = update_gallery_event(&state.db, slug.trim(), &payload)
+        .await
+        .map_err(|error| {
+            tracing::error!(?error, "Failed to update gallery event");
+            ApiError::internal("Unable to update gallery event")
+        })?
+        .ok_or_else(|| ApiError::not_found("Gallery event was not found"))?;
+    Ok(Json(updated))
 }
 
 /// Returns all image records for one event with real DB ids — requires staff access.
@@ -253,6 +269,24 @@ pub(crate) async fn create_gallery_image(
             ApiError::internal("Unable to add gallery image")
         })?;
     Ok(Json(image))
+}
+
+/// Updates sort_order and/or is_preview on one gallery image — requires staff access.
+pub(crate) async fn update_gallery_image_handler(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((slug, id)): Path<(String, i64)>,
+    Json(payload): Json<UpdateGalleryImageRequest>,
+) -> std::result::Result<Json<GalleryImageRecord>, ApiError> {
+    require_role(&state, &headers, AccessRole::Staff).await?;
+    let updated = update_gallery_image(&state.db, slug.trim(), id, &payload)
+        .await
+        .map_err(|error| {
+            tracing::error!(?error, "Failed to update gallery image");
+            ApiError::internal("Unable to update gallery image")
+        })?
+        .ok_or_else(|| ApiError::not_found("Gallery image was not found"))?;
+    Ok(Json(updated))
 }
 
 /// Deletes one gallery image and requires staff access.

@@ -126,7 +126,18 @@ pub(crate) struct CreateGalleryEventRequest {
     pub(crate) date_label: String,
     pub(crate) summary: String,
     pub(crate) event_type: Option<String>,
-    pub(crate) cover_image_url: String,
+    pub(crate) cover_image_url: Option<String>,
+    pub(crate) sort_order: Option<i64>,
+}
+
+/// Request body for updating an existing gallery event's metadata.
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct UpdateGalleryEventRequest {
+    pub(crate) title: Option<String>,
+    pub(crate) date_label: Option<String>,
+    pub(crate) summary: Option<String>,
+    pub(crate) event_type: Option<String>,
+    pub(crate) cover_image_url: Option<String>,
     pub(crate) sort_order: Option<i64>,
 }
 
@@ -154,6 +165,13 @@ pub(crate) struct GalleryImageRecord {
     pub(crate) alt_text: String,
     pub(crate) sort_order: i64,
     pub(crate) is_preview: bool,
+}
+
+/// Request body for updating an existing gallery image (sort order, preview flag).
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct UpdateGalleryImageRequest {
+    pub(crate) sort_order: Option<i64>,
+    pub(crate) is_preview: Option<bool>,
 }
 
 /// Confirms a gallery image was deleted.
