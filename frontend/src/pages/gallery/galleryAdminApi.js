@@ -68,6 +68,23 @@ export async function createGalleryEvent(apiFetch, payload) {
 }
 
 /**
+ * Updates metadata on an existing gallery event (title, cover image, etc).
+ * Only fields that are present in payload are updated (PATCH semantics).
+ */
+export async function updateGalleryEvent(apiFetch, slug, payload) {
+  const request = { ...payload };
+  if (payload.cover_image_url !== undefined) {
+    request.cover_image_url = buildGalleryAssetUrl(slug, payload.cover_image_url) || null;
+  }
+  const response = await apiFetch(`/gallery/${encodeURIComponent(slug)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  return readJson(response, 'Unable to update gallery event.');
+}
+
+/**
  * Deletes a gallery event and all its images.
  */
 export async function deleteGalleryEvent(apiFetch, slug) {
@@ -90,6 +107,18 @@ export async function addGalleryImage(apiFetch, slug, payload) {
   });
   const record = await readJson(response, 'Unable to add gallery image.');
   return normalizeImageRecord(record);
+}
+
+/**
+ * Updates sort_order and/or is_preview on one gallery image.
+ */
+export async function updateGalleryImage(apiFetch, slug, id, payload) {
+  const response = await apiFetch(`/gallery/${encodeURIComponent(slug)}/images/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return readJson(response, 'Unable to update gallery image.');
 }
 
 /**

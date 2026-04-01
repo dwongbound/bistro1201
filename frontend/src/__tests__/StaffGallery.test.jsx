@@ -1,12 +1,13 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import StaffGallery from '../pages/gallery/StaffGallery';
+import StaffGallery, { titleToSlug } from '../pages/gallery/StaffGallery';
 import { fetchGalleryEvents } from '../pages/gallery/galleryApi';
 import {
   addGalleryImage,
   createGalleryEvent,
   fetchAdminEventImages,
+  updateGalleryEvent,
   uploadGalleryFile,
 } from '../pages/gallery/galleryAdminApi';
 
@@ -20,6 +21,8 @@ jest.mock('../pages/gallery/galleryAdminApi', () => ({
   addGalleryImage: jest.fn(),
   deleteGalleryImage: jest.fn(),
   fetchAdminEventImages: jest.fn(),
+  updateGalleryEvent: jest.fn(),
+  updateGalleryImage: jest.fn(),
   uploadGalleryFile: jest.fn(),
 }));
 
@@ -57,6 +60,36 @@ async function loginAsStaff() {
   });
 }
 
+async function waitForEventsSectionReady() {
+  await waitFor(() => {
+    expect(fetchGalleryEvents).toHaveBeenCalled();
+  });
+  await waitFor(() => {
+    expect(screen.queryByText('Loading events...')).not.toBeInTheDocument();
+  });
+  await waitFor(() => {
+    expect(screen.getByText('No events yet.')).toBeInTheDocument();
+  });
+}
+
+describe('titleToSlug', () => {
+  test('lowercases and replaces spaces with underscores', () => {
+    expect(titleToSlug('Spring Supper 2026')).toBe('spring_supper_2026');
+  });
+
+  test('strips special characters', () => {
+    expect(titleToSlug("Chef's Night! (April)")).toBe('chefs_night_april');
+  });
+
+  test('handles multiple consecutive spaces', () => {
+    expect(titleToSlug('Summer  BBQ')).toBe('summer_bbq');
+  });
+
+  test('returns empty string for empty input', () => {
+    expect(titleToSlug('')).toBe('');
+  });
+});
+
 describe('StaffGallery', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -64,6 +97,7 @@ describe('StaffGallery', () => {
     fetchGalleryEvents.mockResolvedValue([]);
     fetchAdminEventImages.mockResolvedValue([]);
     createGalleryEvent.mockResolvedValue({});
+    updateGalleryEvent.mockResolvedValue({});
     addGalleryImage.mockResolvedValue({});
     uploadGalleryFile.mockResolvedValue({ filename: 'hero-home.jpg' });
     global.URL.createObjectURL = jest.fn(() => 'blob:preview-home');
@@ -106,26 +140,63 @@ describe('StaffGallery', () => {
     renderGallery();
     await loginAsStaff();
 
-    expect(screen.getByText('New Event')).toBeInTheDocument();
-    expect(screen.getByText('No events yet.')).toBeInTheDocument();
+    expect(screen.getByText('Events')).toBeInTheDocument();
+    expect(screen.getByText('Home Slideshow')).toBeInTheDocument();
   });
 
-  test('new event form has all seven fields', async () => {
+  test('title field auto-generates the slug shown in its helper text', async () => {
     renderGallery();
     await loginAsStaff();
+    await waitForEventsSectionReady();
 
-    expect(screen.getByLabelText(/^Slug/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Title/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Date Label/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Event Type/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Summary/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Cover Image/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Sort Order/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('New Event'));
+
+    fireEvent.change(screen.getByLabelText(/^Title/i), { target: { value: 'Spring Supper 2026' } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Slug: spring_supper_2026/)).toBeInTheDocument();
+    });
+  });
+
+  test('createGalleryEvent is called with the auto-generated slug', async () => {
+    renderGallery();
+    await loginAsStaff();
+    await waitForEventsSectionReady();
+
+    fireEvent.click(screen.getByText('New Event'));
+
+    fireEvent.change(screen.getByLabelText(/^Title/i), { target: { value: 'My Event' } });
+    fireEvent.change(screen.getByLabelText(/^Date Label/i), { target: { value: 'May 2026' } });
+    fireEvent.change(screen.getByLabelText(/^Summary/i), { target: { value: 'A great event' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create Event' }));
+
+    await waitFor(() => {
+      expect(createGalleryEvent).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({ slug: 'my_event', title: 'My Event' }),
+      );
+    });
+  });
+
+  test('shows required inline errors without submitting when fields are empty', async () => {
+    renderGallery();
+    await loginAsStaff();
+    await waitForEventsSectionReady();
+
+    fireEvent.click(screen.getByText('New Event'));
+    fireEvent.click(screen.getByRole('button', { name: 'Create Event' }));
+
+    await waitFor(() => {
+      const requiredMessages = screen.getAllByText('Required.');
+      expect(requiredMessages.length).toBeGreaterThanOrEqual(2);
+    });
+    expect(createGalleryEvent).not.toHaveBeenCalled();
   });
 
   test('renders loaded events in the list', async () => {
     fetchGalleryEvents.mockResolvedValue([
-      { slug: 'spring-2026', title: 'Spring Supper', dateLabel: 'April 2026', coverImageUrl: '/img.jpg', summary: 'Nice event', sortOrder: 1 },
+      { slug: 'spring-2026', title: 'Spring Supper', dateLabel: 'April 2026', coverImage: '/img.jpg', summary: 'Nice event' },
     ]);
     renderGallery();
     await loginAsStaff();
@@ -133,33 +204,12 @@ describe('StaffGallery', () => {
     await waitFor(() => {
       expect(screen.getByText('Spring Supper')).toBeInTheDocument();
     });
-    // The caption text is split across text nodes by React's JSX interpolation
     expect(screen.getByText(/April 2026.*spring-2026/)).toBeInTheDocument();
   });
 
-  test('clicking an event shows the image management panel', async () => {
+  test('clicking Manage opens the image management dialog', async () => {
     fetchGalleryEvents.mockResolvedValue([
-      { slug: 'spring-2026', title: 'Spring Supper', dateLabel: 'April 2026', coverImageUrl: '/img.jpg', summary: 'Nice event', sortOrder: 1 },
-    ]);
-    const user = userEvent.setup();
-    renderGallery();
-    await loginAsStaff();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('event-row')).toBeInTheDocument();
-    });
-
-    await user.click(screen.getByTestId('event-row'));
-
-    await waitFor(() => {
-      expect(screen.getByRole('checkbox', { name: /preview/i })).toBeInTheDocument();
-    });
-    expect(screen.getByText(/Tap to pick photos — select multiple at once/i)).toBeInTheDocument();
-  });
-
-  test('clicking the delete icon opens a confirmation dialog', async () => {
-    fetchGalleryEvents.mockResolvedValue([
-      { slug: 'spring-2026', title: 'Spring Supper', dateLabel: 'April 2026', coverImageUrl: '/img.jpg', summary: 'Nice event', sortOrder: 1 },
+      { slug: 'spring-2026', title: 'Spring Supper', dateLabel: 'April 2026', coverImage: '/img.jpg', summary: 'Nice event' },
     ]);
     renderGallery();
     await loginAsStaff();
@@ -168,7 +218,26 @@ describe('StaffGallery', () => {
       expect(screen.getByText('Spring Supper')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Delete event' }));
+    fireEvent.click(screen.getByRole('button', { name: /Manage/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Add Photos/i)).toBeInTheDocument();
+  });
+
+  test('clicking Delete opens a confirmation dialog', async () => {
+    fetchGalleryEvents.mockResolvedValue([
+      { slug: 'spring-2026', title: 'Spring Supper', dateLabel: 'April 2026', coverImage: '/img.jpg', summary: 'Nice event' },
+    ]);
+    renderGallery();
+    await loginAsStaff();
+
+    await waitFor(() => {
+      expect(screen.getByText('Spring Supper')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^Delete$/i }));
 
     const dialog = await waitFor(() => screen.getByRole('dialog', { name: 'Delete Event' }));
     expect(within(dialog).getByText(/Spring Supper/)).toBeInTheDocument();
