@@ -173,7 +173,10 @@ pub(crate) fn load_email_config() -> std::result::Result<Option<EmailConfig>, Ap
     let reply_to_address = env::var("SMTP_REPLY_TO_ADDRESS").ok();
     let reply_to_name = env::var("SMTP_REPLY_TO_NAME").ok();
     let port: u16 = env::var("SMTP_PORT")
-        .unwrap_or_else(|_| "587".to_string())
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "587".to_string())
         .parse()
         .map_err(|_| ApiError::internal("SMTP_PORT must be a valid port number"))?;
     let confirmation_template = load_confirmation_template()?;

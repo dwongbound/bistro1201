@@ -193,10 +193,9 @@ you can add new events and swap image URLs without rebuilding the React app.
 
 The intended flow is:
 
-1. Upload your images to Cloudflare R2 or Cloudflare Images.
-2. Copy the public delivery URLs.
-3. Save those URLs and the event metadata into PostgreSQL.
-4. The frontend Gallery pages load that data from `/api/gallery` and `/api/gallery/:slug`.
+1. Upload your images to object storage such as Cloudflare R2 or local MinIO.
+2. Save the event metadata and image records through the gallery admin or backend API.
+3. The frontend Gallery pages load that data from `/api/gallery` and `/api/gallery/:slug`.
 
 This keeps image hosting, event metadata, and frontend deploys nicely decoupled.
 
@@ -337,6 +336,9 @@ docker compose --env-file env/test.env --profile test run --rm e2e sh -lc \
   "cd /work && ./scripts/run_e2e_in_docker.sh"
 ```
 
+`E2E_BASE_URL=http://nginx` is only used inside the Dockerized Playwright test
+container. It is not a normal browser URL for local development.
+
 ### Test Order
 
 Run tests in this order when possible:
@@ -366,7 +368,7 @@ Run tests in this order when possible:
 
 - App through `nginx`: `http://localhost`
 - Backend: `http://localhost:3000`
-- Database: whatever `DATABASE_URL` points at in your production env
+- Database: Neon Postgres via `DATABASE_URL`
 - Start command: `docker compose --env-file env/prod.env up --build`
 
 ## Deployment
@@ -387,7 +389,7 @@ the built frontend on Cloudflare and point it at a separately hosted backend.
    /opt/bistro1201/env/prod.env
    ```
 
-4. Make sure Postgres data lives on persistent storage, either through a Docker volume or a managed database service.
+4. Point `DATABASE_URL` at your Neon Postgres instance before starting the backend.
 5. Start the app:
 
    ```bash
@@ -401,7 +403,7 @@ the built frontend on Cloudflare and point it at a separately hosted backend.
 
 - Replace any default access codes in production.
 - Set real SMTP values if reservation emails should be sent.
-- Make sure the production Postgres database is backed up regularly.
+- Make sure the Neon production database is backed up regularly.
 - Keep the production env file on the server instead of committing secrets to GitHub.
 
 ## GitHub Actions
@@ -449,9 +451,11 @@ the right values for dev, staging, or prod.
 - `FRONTEND_HOST_PORT`: Host port exposed for the Vite dev server
 - `BACKEND_HOST_PORT`: Host port exposed for the Rust backend
 - `NGINX_HOST_PORT`: Host port exposed for the `nginx` entrypoint
+- `POSTGRES_HOST_PORT`: Host port exposed for the Compose Postgres service in local Docker environments
 - `APP_API_BASE_PATH`: Base API path compiled into the frontend build
-- `DEV_API_PROXY_TARGET`: Dev-only Vite proxy target for `/api`
-- `E2E_BASE_URL`: Base URL used by the Playwright test container
+- `APP_R2_BASE_URL`: Public base URL the frontend uses to render gallery and slideshow images
+- `DEV_API_PROXY_TARGET`: Dev-only Vite proxy target for `/api`, usually only needed in `env/dev.env` and `env/test.env`
+- `E2E_BASE_URL`: Base URL used only by the Dockerized Playwright test container, typically in `env/test.env`
 
 For a split prod deployment, the main variable boundary is:
 
@@ -463,25 +467,26 @@ as long as `APP_API_BASE_PATH` points at the backend's public `/api` origin.
 
 ### Backend Variables
 
-- `POSTGRES_DB`: Database name used by the local Compose Postgres service
-- `POSTGRES_USER`: Database user used by the local Compose Postgres service
-- `POSTGRES_PASSWORD`: Database password used by the local Compose Postgres service
+- `POSTGRES_DB`: Database name used only by the local Compose Postgres service
+- `POSTGRES_USER`: Database user used only by the local Compose Postgres service
+- `POSTGRES_PASSWORD`: Database password used only by the local Compose Postgres service
 - `DATABASE_URL`: Full Postgres connection string used by the Rust backend
 - `PORT`: Port the Rust server listens on
 - `GUEST_ACCESS_CODE`: Access code that can load reserve availability and
   create reservations
-- `GUEST_ACCESS_CODE_EXPIRES_AT`: Optional expiration for the default guest
-  code used to bootstrap a fresh database. Accepts either RFC3339 like
-  `2026-04-01T00:00:00Z` or a Unix timestamp
 - `STAFF_ACCESS_CODE`: Access code that can also open and close available
   reservation dates
+- `R2_ENDPOINT_URL`: S3-compatible object-storage endpoint used by backend uploads
+- `R2_BUCKET`: Bucket name used for gallery and slideshow uploads
+- `R2_ACCESS_KEY_ID`: S3-style access key used by backend uploads
+- `R2_SECRET_ACCESS_KEY`: S3-style secret key used by backend uploads
 - `POSTMARK_SERVER_TOKEN`: Optional shortcut for Postmark SMTP. When set, the
   backend defaults to `smtp.postmarkapp.com:587` and uses this token for both
   SMTP username and password unless you override them explicitly.
-- `SMTP_HOST`: SMTP relay host used for reservation confirmation emails
-- `SMTP_PORT`: SMTP relay port, defaults to `587`
-- `SMTP_USERNAME`: SMTP username when email delivery is enabled
-- `SMTP_PASSWORD`: SMTP password when email delivery is enabled
+- `SMTP_HOST`: SMTP relay host used for reservation confirmation emails when you are not using the Postmark shortcut
+- `SMTP_PORT`: SMTP relay port, defaults to `587` when you are not using the Postmark shortcut
+- `SMTP_USERNAME`: SMTP username when email delivery is enabled without the Postmark shortcut
+- `SMTP_PASSWORD`: SMTP password when email delivery is enabled without the Postmark shortcut
 - `SMTP_FROM_ADDRESS`: From-address used on reservation confirmation emails
 - `SMTP_FROM_NAME`: Optional display name for the confirmation sender
 - `SMTP_REPLY_TO_ADDRESS`: Optional reply-to mailbox if guest replies should go
@@ -489,6 +494,7 @@ as long as `APP_API_BASE_PATH` points at the backend's public `/api` origin.
 - `SMTP_REPLY_TO_NAME`: Optional display name paired with
   `SMTP_REPLY_TO_ADDRESS`
 - `SMTP_CONFIRMATION_TEMPLATE_PATH`: Optional path to the plain-text reservation email template. Defaults to `/app/templates/reservation_confirmation.txt`
+- `SMTP_CANCELLATION_TEMPLATE_PATH`: Optional path to the cancellation email template. Defaults to `/app/templates/reservation_cancellation.txt`
 
 The default confirmation email template lives at [backend/templates/reservation_confirmation.txt](/Users/dwong/Documents/bistro1201/backend/templates/reservation_confirmation.txt) and supports:
 
@@ -521,10 +527,13 @@ The checked-in [env/prod.env](/Users/dwong/Documents/bistro1201/env/prod.env)
 is now written as a decoupled template:
 
 - `APP_API_BASE_PATH` should point at your public backend URL
-- `DATABASE_URL` should point at whichever Postgres host you choose later
+- `APP_R2_BASE_URL` should point at your public image/CDN hostname
+- `DATABASE_URL` should point at your Neon Postgres connection string
+- `R2_ENDPOINT_URL` should use your Cloudflare R2 S3 endpoint, such as `https://<account-id>.r2.cloudflarestorage.com`
+- `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` should be set from your real storage credentials
 - Postmark sender and reply-to values are ready to use with `1201bistrocafe.com`
 
-That keeps the frontend, backend, database, and email provider independently
+That keeps the frontend, backend, Neon database, and email provider independently
 replaceable.
 
 ## Troubleshooting
@@ -572,7 +581,7 @@ replaceable.
 ### Database Location
 
 - Development and staging data now live in the named Docker volume `postgres_data`.
-- Production should use a persistent Postgres volume or managed Postgres service.
+- Production uses Neon for Postgres rather than the local Compose database.
 - If you are migrating from older SQLite-based local data, those `.db` files are no
   longer read by the backend and can be archived or deleted once you no longer need them.
 

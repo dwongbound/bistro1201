@@ -428,7 +428,7 @@ test.describe('1201 Bistro Website', () => {
     await expect(page.getByRole('button', { name: /Sign Out/i })).toBeVisible();
     await expect(page.getByText('New Event')).toBeVisible();
     await expect(page.getByLabel(/^Slug/)).toBeVisible();
-    await expect(page.getByText('Events')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Events' })).toBeVisible();
   });
 
   test('should keep an opened reservation slot visible after leaving reserve and coming back', async ({ page }) => {
