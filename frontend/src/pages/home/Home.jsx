@@ -5,10 +5,9 @@ import { Link as RouterLink } from 'react-router-dom';
 import BrandWordmark from '../../common/BrandWordmark';
 import { fetchGalleryEvent } from '../gallery/galleryApi';
 
-const SLIDE_INTERVAL_MS = 5000;
+const CYCLE_INTERVAL_MS = 5000;
 const TRANSITION_MS = 1500;
-const FADE_IN_MS = 1200;
-const FADE_IN_DELAY_MS = 80;
+const FADE_IN_DELAY_MS = 100;
 
 /**
  * Shows the landing-page hero over a full-screen crossfading photo slideshow.
@@ -35,7 +34,7 @@ function Home() {
     if (slides.length <= 1) return;
     intervalRef.current = setInterval(() => {
       setCurrentIndex((i) => (i + 1) % slides.length);
-    }, SLIDE_INTERVAL_MS);
+    }, CYCLE_INTERVAL_MS);
     return () => clearInterval(intervalRef.current);
   }, [slides.length]);
 
@@ -116,9 +115,7 @@ function Home() {
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               opacity: visible && loadedSlides.has(slide.src) && i === currentIndex ? 1 : 0,
-              transition: i === currentIndex
-                ? `opacity ${visible ? FADE_IN_MS : TRANSITION_MS}ms ease`
-                : `opacity ${TRANSITION_MS}ms ease`,
+              transition: `opacity ${TRANSITION_MS}ms ease`,
             }}
           />
         ))}
@@ -128,7 +125,7 @@ function Home() {
             inset: 0,
             background: 'linear-gradient(to bottom, rgba(18,15,13,0.82) 0%, rgba(18,15,13,0.64) 50%, rgba(18,15,13,0.9) 100%)',
             opacity: visible ? 1 : 0,
-            transition: `opacity ${FADE_IN_MS}ms ease`,
+            transition: `opacity ${TRANSITION_MS}ms ease`,
           }}
         />
       </Box>
@@ -145,7 +142,7 @@ function Home() {
           zIndex: 2,
           opacity: visible ? 1 : 0,
           transform: visible ? 'none' : 'translateY(12px)',
-          transition: `opacity ${FADE_IN_MS}ms ease, transform ${FADE_IN_MS}ms ease`,
+          transition: `opacity ${TRANSITION_MS}ms ease, transform ${TRANSITION_MS}ms ease`,
         }}
       >
         <Box

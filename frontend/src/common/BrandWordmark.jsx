@@ -1,8 +1,8 @@
 import { Box } from '@mui/material';
 import { useEffect, useState } from 'react';
 
-const CYCLE_INTERVAL_MS = 3000;
-const TRANSITION_MS = 75;
+const CYCLE_INTERVAL_MS = 5000;
+const TRANSITION_MS = 1000;
 const CYCLE_WORDS = ['Bistro', 'Cafe', 'After Hours'];
 
 function CyclingWord({ words }) {
