@@ -25,7 +25,6 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  FormControlLabel,
   IconButton,
   LinearProgress,
   Stack,
@@ -133,8 +132,6 @@ function SortableHomeThumb({ image, onDelete }) {
 }
 
 const emptyEventForm = { title: '', date_label: '', summary: '', event_type: 'Bistro', sort_order: '' };
-const emptyImageForm = { sort_order: '', is_preview: false };
-
 /**
  * Hidden staff-only page at /staff/gallery for managing gallery events and images.
  * Not linked in the nav — access by direct URL only.
@@ -166,7 +163,6 @@ function StaffGallery() {
   const [manageEvent, setManageEvent] = useState(null);
   const [manageImages, setManageImages] = useState([]);
   const [manageLoading, setManageLoading] = useState(false);
-  const [imageForm, setImageForm] = useState(emptyImageForm);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [imageFormBusy, setImageFormBusy] = useState(false);
@@ -183,7 +179,6 @@ function StaffGallery() {
   const [homeLoading, setHomeLoading] = useState(false);
   const [homeSelectedFiles, setHomeSelectedFiles] = useState([]);
   const [homeUploadProgress, setHomeUploadProgress] = useState(null);
-  const [homeFormBusy, setHomeFormBusy] = useState(false);
   const [homeFormError, setHomeFormError] = useState('');
   const [deleteHomeImageDialog, setDeleteHomeImageDialog] = useState(null);
   const [activeDragId, setActiveDragId] = useState(null);
@@ -202,6 +197,7 @@ function StaffGallery() {
   const apiFetch = createApiFetch({
     apiUrl,
     getToken: () => auth.token,
+    getServiceKey: () => readGalleryStaffCode(),
     onUnauthorized: clearAuth,
   });
 
@@ -376,7 +372,6 @@ function StaffGallery() {
 
   const openManage = (ev) => {
     setManageEvent(ev);
-    setImageForm(emptyImageForm);
     setSelectedFiles([]);
     setImageFormError('');
   };
@@ -408,35 +403,34 @@ function StaffGallery() {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     selectedFiles.forEach((f) => URL.revokeObjectURL(f.previewUrl));
-    setSelectedFiles(files.map((file) => ({
+    const pendingFiles = files.map((file) => ({
       file,
       previewUrl: URL.createObjectURL(file),
       altText: file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
-    })));
-    setImageForm(emptyImageForm);
+    }));
+    setSelectedFiles(pendingFiles);
+    void handleAddImage(pendingFiles);
   };
 
-  const handleAddImage = async (e) => {
-    e.preventDefault();
-    if (!manageEvent || selectedFiles.length === 0) return;
+  const handleAddImage = async (filesToUpload) => {
+    if (!manageEvent || filesToUpload.length === 0) return;
     setImageFormBusy(true);
     setImageFormError('');
-    setUploadProgress({ done: 0, total: selectedFiles.length });
+    setUploadProgress({ done: 0, total: filesToUpload.length });
     try {
-      for (let i = 0; i < selectedFiles.length; i++) {
-        const { file, altText } = selectedFiles[i];
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const { file, altText } = filesToUpload[i];
         const upload = await uploadGalleryFile(apiFetch, manageEvent.slug, file);
         await addGalleryImage(apiFetch, manageEvent.slug, {
           image_url: upload?.filename || file.name,
           alt_text: altText,
-          sort_order: imageForm.sort_order !== '' ? Number(imageForm.sort_order) + i : i,
-          is_preview: imageForm.is_preview,
+          sort_order: manageImages.length + i,
+          is_preview: false,
         });
-        setUploadProgress({ done: i + 1, total: selectedFiles.length });
+        setUploadProgress({ done: i + 1, total: filesToUpload.length });
       }
-      selectedFiles.forEach((f) => URL.revokeObjectURL(f.previewUrl));
+      filesToUpload.forEach((f) => URL.revokeObjectURL(f.previewUrl));
       setSelectedFiles([]);
-      setImageForm(emptyImageForm);
       if (fileInputRef.current) fileInputRef.current.value = '';
       await loadManageImages(manageEvent.slug);
     } catch (error) {
@@ -491,27 +485,14 @@ function StaffGallery() {
     }
   };
 
-  const handleHomeFileSelect = (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    homeSelectedFiles.forEach((f) => URL.revokeObjectURL(f.previewUrl));
-    setHomeSelectedFiles(files.map((file) => ({
-      file,
-      previewUrl: URL.createObjectURL(file),
-      altText: file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
-    })));
-  };
-
-  const handleAddHomeImages = async (e) => {
-    e.preventDefault();
-    if (!homeSelectedFiles.length) return;
-    setHomeFormBusy(true);
+  const uploadHomeFiles = async (filesToUpload) => {
+    if (!filesToUpload.length) return;
     setHomeFormError('');
-    setHomeUploadProgress({ done: 0, total: homeSelectedFiles.length });
+    setHomeUploadProgress({ done: 0, total: filesToUpload.length });
     try {
       await ensureHomeEvent();
-      for (let i = 0; i < homeSelectedFiles.length; i++) {
-        const { file, altText } = homeSelectedFiles[i];
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const { file, altText } = filesToUpload[i];
         const upload = await uploadGalleryFile(apiFetch, 'home', file);
         await addGalleryImage(apiFetch, 'home', {
           image_url: upload?.filename || file.name,
@@ -519,18 +500,30 @@ function StaffGallery() {
           sort_order: homeImages.length + i,
           is_preview: false,
         });
-        setHomeUploadProgress({ done: i + 1, total: homeSelectedFiles.length });
+        setHomeUploadProgress({ done: i + 1, total: filesToUpload.length });
       }
-      homeSelectedFiles.forEach((f) => URL.revokeObjectURL(f.previewUrl));
+      filesToUpload.forEach((f) => URL.revokeObjectURL(f.previewUrl));
       setHomeSelectedFiles([]);
       if (homeFileInputRef.current) homeFileInputRef.current.value = '';
       await loadHomeImages();
     } catch (error) {
       setHomeFormError(error.message);
     } finally {
-      setHomeFormBusy(false);
       setHomeUploadProgress(null);
     }
+  };
+
+  const handleHomeFileSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    homeSelectedFiles.forEach((f) => URL.revokeObjectURL(f.previewUrl));
+    const newFiles = files.map((file) => ({
+      file,
+      previewUrl: URL.createObjectURL(file),
+      altText: file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
+    }));
+    setHomeSelectedFiles(newFiles);
+    await uploadHomeFiles(newFiles);
   };
 
   const handleDeleteHomeImage = async () => {
@@ -678,7 +671,7 @@ function StaffGallery() {
         )}
 
         {/* Upload new home photos */}
-        <Stack component="form" onSubmit={handleAddHomeImages} spacing={2}>
+        <Stack spacing={2}>
           <input ref={homeFileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleHomeFileSelect} />
           <Box
             onClick={() => homeFileInputRef.current?.click()}
@@ -705,7 +698,7 @@ function StaffGallery() {
             ) : (
               <Stack alignItems="center" justifyContent="center" spacing={0.5} sx={{ py: 3 }}>
                 <PhotoCameraRoundedIcon sx={{ fontSize: 28, color: 'text.secondary', opacity: 0.45 }} />
-                <Typography color="text.secondary" sx={{ fontSize: '0.85rem' }}>Tap to pick photos</Typography>
+                <Typography color="text.secondary" sx={{ fontSize: '0.85rem' }}>Add photos</Typography>
               </Stack>
             )}
           </Box>
@@ -722,9 +715,6 @@ function StaffGallery() {
               <LinearProgress variant="determinate" value={(homeUploadProgress.done / homeUploadProgress.total) * 100} color="secondary" />
             </Box>
           ) : null}
-          <Button type="submit" variant="contained" disabled={homeFormBusy || homeSelectedFiles.length === 0} sx={{ alignSelf: 'flex-start' }}>
-            {homeFormBusy ? <CircularProgress size={18} color="inherit" /> : `Add ${homeSelectedFiles.length > 1 ? `${homeSelectedFiles.length} Photos` : 'Photo'}`}
-          </Button>
         </Stack>
       </SurfaceCard>
 
@@ -776,9 +766,9 @@ function StaffGallery() {
                       startIcon={<EditRoundedIcon />}
                       variant={editingSlug === event.slug ? 'contained' : 'outlined'}
                       onClick={() => editingSlug === event.slug ? setEditingSlug(null) : startEditing(event)}
-                      sx={{ minWidth: 0 }}
+                      sx={{ minWidth: 0, px: { xs: 1, sm: undefined }, '& .MuiButton-startIcon': { mx: { xs: 0, sm: undefined } } }}
                     >
-                      Edit
+                      <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Edit</Box>
                     </Button>
                     <Button
                       size="small"
@@ -786,18 +776,18 @@ function StaffGallery() {
                       startIcon={<DeleteRoundedIcon />}
                       variant="outlined"
                       onClick={() => setDeleteEventDialog(event)}
-                      sx={{ minWidth: 0, borderColor: 'rgba(211,47,47,0.4)' }}
+                      sx={{ minWidth: 0, borderColor: 'rgba(211,47,47,0.4)', px: { xs: 1, sm: undefined }, '& .MuiButton-startIcon': { mx: { xs: 0, sm: undefined } } }}
                     >
-                      Delete
+                      <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Delete</Box>
                     </Button>
                     <Button
                       size="small"
                       startIcon={<AddPhotoAlternateRoundedIcon />}
                       variant="outlined"
                       onClick={() => openManage(event)}
-                      sx={{ minWidth: 0 }}
+                      sx={{ minWidth: 0, px: { xs: 1, sm: undefined }, '& .MuiButton-startIcon': { mx: { xs: 0, sm: undefined } } }}
                     >
-                      Manage
+                      <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Manage</Box>
                     </Button>
                   </Stack>
                 </Stack>
@@ -940,129 +930,126 @@ function StaffGallery() {
               <CircularProgress size={18} />
               <Typography color="text.secondary">Loading images...</Typography>
             </Stack>
-          ) : manageImages.length === 0 ? (
-            <Typography color="text.secondary" sx={{ mb: 2 }}>No images yet — add some below.</Typography>
           ) : (
-            <Stack divider={<Divider sx={{ borderColor: 'rgba(217,195,161,0.08)' }} />} sx={{ mb: 2.5 }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+                gap: 1.5,
+              }}
+            >
               {manageImages.map((image) => {
                 const isCover = manageEvent && image.imageUrl === manageEvent.coverImage;
                 return (
-                  <Stack
+                  <Box
                     key={`${image.id}-${image.imageUrl}`}
-                    direction="row"
-                    alignItems="center"
-                    spacing={1.5}
-                    sx={{ py: 1.5 }}
+                    sx={{
+                      borderRadius: 2,
+                      border: '1px solid',
+                      borderColor: isCover ? 'secondary.main' : 'rgba(217,195,161,0.12)',
+                      backgroundColor: isCover ? 'rgba(176,122,68,0.08)' : 'rgba(255,255,255,0.02)',
+                      overflow: 'hidden',
+                    }}
                   >
                     <Box
                       sx={{
-                        width: 52, height: 52, borderRadius: 1, flexShrink: 0,
+                        width: '100%',
+                        aspectRatio: '4 / 3',
                         backgroundColor: 'rgba(255,255,255,0.05)',
                         backgroundImage: image.imageUrl ? `url(${image.imageUrl})` : 'none',
                         backgroundSize: 'cover', backgroundPosition: 'center',
-                        border: isCover ? '2px solid' : '1px solid',
-                        borderColor: isCover ? 'secondary.main' : 'rgba(217,195,161,0.12)',
                       }}
                     />
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography sx={{ fontSize: '0.85rem', wordBreak: 'break-all', lineHeight: 1.4 }}>
-                        {image.imageUrl.split('/').pop()}
-                      </Typography>
-                      <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.25 }}>
-                        <Typography variant="caption" color="text.secondary">{image.altText}</Typography>
-                        {isCover ? <Chip label="cover" size="small" color="secondary" sx={{ height: 18, fontSize: '0.7rem' }} /> : null}
+                    <Stack spacing={1} sx={{ p: 1.25 }}>
+                      <Box>
+                        <Typography sx={{ fontSize: '0.85rem', wordBreak: 'break-all', lineHeight: 1.4 }}>
+                          {image.imageUrl.split('/').pop()}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {image.altText}
+                        </Typography>
+                      </Box>
+                      <Stack direction="row" spacing={0.75} alignItems="center" useFlexGap flexWrap="wrap">
+                        {isCover ? <Chip label="Cover image" size="small" color="secondary" sx={{ fontWeight: 700 }} /> : null}
+                        {image.isPreview ? <Chip label="Gallery preview" size="small" variant="outlined" sx={{ fontWeight: 700 }} /> : null}
                       </Stack>
-                    </Box>
-                    <Tooltip title={isCover ? 'Current cover' : 'Set as cover'}>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleSetCover(image)}
-                        disabled={settingCover === image.id}
-                        sx={{ color: isCover ? 'secondary.main' : 'text.secondary', flexShrink: 0 }}
-                      >
-                        {settingCover === image.id
-                          ? <CircularProgress size={16} color="secondary" />
-                          : isCover ? <StarRoundedIcon fontSize="small" /> : <StarBorderRoundedIcon fontSize="small" />}
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete image">
-                      <IconButton
-                        size="small"
-                        onClick={() => setDeleteImageDialog(image)}
-                        sx={{ color: 'text.secondary', flexShrink: 0 }}
-                      >
-                        <DeleteRoundedIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Stack>
+                      <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                        <Tooltip title={isCover ? 'Current cover' : 'Set as cover'}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleSetCover(image)}
+                            disabled={settingCover === image.id}
+                            sx={{ color: isCover ? 'secondary.main' : 'text.secondary', flexShrink: 0 }}
+                          >
+                            {settingCover === image.id
+                              ? <CircularProgress size={16} color="secondary" />
+                              : isCover ? <StarRoundedIcon fontSize="small" /> : <StarBorderRoundedIcon fontSize="small" />}
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete image">
+                          <IconButton
+                            size="small"
+                            onClick={() => setDeleteImageDialog(image)}
+                            sx={{ color: 'text.secondary', flexShrink: 0 }}
+                          >
+                            <DeleteRoundedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </Stack>
+                  </Box>
                 );
               })}
-            </Stack>
-          )}
 
-          {/* Add photos form */}
-          <Divider sx={{ borderColor: 'rgba(217,195,161,0.1)', mb: 2 }} />
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>Add Photos</Typography>
-          <Stack component="form" onSubmit={handleAddImage} spacing={2}>
-            <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleFileSelect} />
-            <Box
-              onClick={() => fileInputRef.current?.click()}
-              sx={{
-                border: '1px dashed',
-                borderColor: selectedFiles.length ? 'secondary.main' : 'rgba(217,195,161,0.3)',
-                borderRadius: 2, overflow: 'hidden', cursor: 'pointer',
-                transition: 'border-color 140ms ease',
-                '&:hover': { borderColor: 'rgba(217,195,161,0.6)' },
-              }}
-            >
-              {selectedFiles.length > 0 ? (
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 0.5, p: 1, backgroundColor: 'rgba(0,0,0,0.25)' }}>
-                  {selectedFiles.map(({ previewUrl, file }) => (
-                    <Box
-                      key={previewUrl}
-                      sx={{ aspectRatio: '1', backgroundImage: `url(${previewUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: 1 }}
-                      title={file.name}
-                    />
-                  ))}
-                </Box>
-              ) : (
-                <Stack alignItems="center" justifyContent="center" spacing={1} sx={{ py: 4 }}>
-                  <PhotoCameraRoundedIcon sx={{ fontSize: 32, color: 'text.secondary', opacity: 0.45 }} />
-                  <Typography color="text.secondary" sx={{ fontSize: '0.9rem' }}>Tap to pick photos</Typography>
-                </Stack>
-              )}
-            </Box>
-            {selectedFiles.length > 0 ? (
-              <Typography variant="caption" color="text.secondary">
-                {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
-              </Typography>
-            ) : null}
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
-              <TextField
-                label="Starting Sort Order"
-                value={imageForm.sort_order}
-                onChange={(e) => setImageForm((f) => ({ ...f, sort_order: e.target.value }))}
-                size="small"
-                type="number"
-                sx={{ width: { xs: '100%', sm: 160 } }}
-              />
-              <FormControlLabel
-                control={<Checkbox checked={imageForm.is_preview} onChange={(e) => setImageForm((f) => ({ ...f, is_preview: e.target.checked }))} color="secondary" />}
-                label="Preview on gallery index"
-              />
-            </Stack>
-            {uploadProgress ? (
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-                  Uploading {uploadProgress.done} / {uploadProgress.total}…
-                </Typography>
-                <LinearProgress variant="determinate" value={(uploadProgress.done / uploadProgress.total) * 100} color="secondary" />
+              <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleFileSelect} />
+              <Box
+                onClick={() => fileInputRef.current?.click()}
+                sx={{
+                  border: '1px dashed',
+                  borderColor: selectedFiles.length ? 'secondary.main' : 'rgba(217,195,161,0.3)',
+                  borderRadius: 2,
+                  minHeight: 160,
+                  cursor: imageFormBusy ? 'progress' : 'pointer',
+                  transition: 'border-color 140ms ease, background-color 140ms ease',
+                  '&:hover': imageFormBusy ? undefined : {
+                    borderColor: 'rgba(217,195,161,0.6)',
+                    backgroundColor: 'rgba(255,255,255,0.03)',
+                  },
+                }}
+              >
+                {selectedFiles.length > 0 ? (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 0.5, p: 1 }}>
+                    {selectedFiles.map(({ previewUrl, file }) => (
+                      <Box
+                        key={previewUrl}
+                        sx={{ aspectRatio: '1', backgroundImage: `url(${previewUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: 1 }}
+                        title={file.name}
+                      />
+                    ))}
+                  </Box>
+                ) : (
+                  <Stack alignItems="center" justifyContent="center" spacing={1} sx={{ height: '100%', minHeight: 160, px: 2, textAlign: 'center' }}>
+                    <PhotoCameraRoundedIcon sx={{ fontSize: 32, color: 'text.secondary', opacity: 0.45 }} />
+                    <Typography color="text.secondary" sx={{ fontSize: '0.9rem' }}>
+                      Add photos
+                    </Typography>
+                  </Stack>
+                )}
               </Box>
-            ) : null}
-            <Button type="submit" variant="contained" disabled={imageFormBusy || selectedFiles.length === 0} sx={{ alignSelf: 'flex-start' }}>
-              {imageFormBusy ? <CircularProgress size={20} color="inherit" /> : `Add ${selectedFiles.length > 1 ? `${selectedFiles.length} Photos` : 'Photo'}`}
-            </Button>
-          </Stack>
+            </Box>
+          )}
+          {manageLoading ? null : manageImages.length === 0 ? (
+            <Typography color="text.secondary" sx={{ mb: 2 }}>No images yet. Pick photos to add them here.</Typography>
+          ) : null}
+
+          {uploadProgress ? (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+                Uploading {uploadProgress.done} / {uploadProgress.total}…
+              </Typography>
+              <LinearProgress variant="determinate" value={(uploadProgress.done / uploadProgress.total) * 100} color="secondary" />
+            </Box>
+          ) : null}
         </DialogContent>
       </Dialog>
 

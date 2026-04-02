@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { readGuestAccessCode, readStaffAccessCode } from '../common/reserveAccessCookie';
+import { DEFAULT_GUEST_ACCESS_CODE, DEFAULT_STAFF_ACCESS_CODE } from '../test/accessCodeFixtures';
 import { formatHumanDate, formatHumanTime } from '../pages/reserve/reserve';
 import Scheduling from '../pages/reserve/Scheduling';
 
@@ -74,7 +75,7 @@ async function submitGuestAccessCode(user, code) {
   });
 }
 
-async function unlockStaffControls(user, code = 'service1201') {
+async function unlockStaffControls(user, code = DEFAULT_STAFF_ACCESS_CODE) {
   await act(async () => {
     await user.type(screen.getByPlaceholderText('Staff Access Code'), code);
     await user.click(screen.getByText('Unlock Staff Controls'));
@@ -119,14 +120,14 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(screen.getByText('Reserve an Evening')).toBeInTheDocument();
       expect(fetch).toHaveBeenNthCalledWith(1, '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: 'bistro1201' }),
+        body: JSON.stringify({ code: DEFAULT_GUEST_ACCESS_CODE }),
       });
       expect(fetch).toHaveBeenCalledTimes(3);
     });
@@ -157,18 +158,83 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(screen.getByText('Reserve an Evening')).toBeInTheDocument();
     });
 
-    expect(document.cookie).toContain('bistro_guest_access_code=bistro1201');
+    expect(document.cookie).toContain(`bistro_guest_access_code=${DEFAULT_GUEST_ACCESS_CODE}`);
+  });
+
+  test('stores the staff access code too when the guest form logs in with a staff code', async () => {
+    const user = userEvent.setup();
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ token: 'staff-token', role: 'staff' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          availability: { date: '2026-03-24', dinner_time: '19:00' },
+          removed_reservation: null,
+          cancellation_email_sent: false,
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      });
+
+    render(<Scheduling />);
+
+    await submitGuestAccessCode(user, DEFAULT_STAFF_ACCESS_CODE);
+
+    await waitFor(() => {
+      expect(screen.getByText('Add Slot')).toBeInTheDocument();
+    });
+
+    expect(readGuestAccessCode()).toBe(DEFAULT_STAFF_ACCESS_CODE);
+    expect(readStaffAccessCode()).toBe(DEFAULT_STAFF_ACCESS_CODE);
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Remove Slot' }));
+    });
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(8);
+    });
+
+    expect(fetch.mock.calls[4][0]).toBe('/api/availability/2026-03-24?dinner_time=19%3A00');
+    expect(fetch.mock.calls[4][1].method).toBe('DELETE');
+    expect(fetch.mock.calls[4][1].headers.get('Authorization')).toBe('Bearer staff-token');
+    expect(fetch.mock.calls[4][1].headers.get('X-Service-Key')).toBe(DEFAULT_STAFF_ACCESS_CODE);
   });
 
   test('auto reauthenticates with a remembered guest access cookie', async () => {
     const openDate = addDays(14);
-    document.cookie = 'bistro_guest_access_code=bistro1201; Path=/';
+    document.cookie = `bistro_guest_access_code=${DEFAULT_GUEST_ACCESS_CODE}; Path=/`;
     fetch
       .mockResolvedValueOnce({
         ok: true,
@@ -190,7 +256,7 @@ describe('Scheduling Component', () => {
       expect(fetch).toHaveBeenNthCalledWith(1, '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: 'bistro1201' }),
+        body: JSON.stringify({ code: DEFAULT_GUEST_ACCESS_CODE }),
       });
     });
   });
@@ -266,10 +332,14 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(screen.getByText('Guest Reservation')).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: formatHumanDate(openDate) })).toBeInTheDocument();
     });
 
     await user.click(screen.getByRole('button', { name: formatHumanDate(openDate) }));
@@ -357,10 +427,14 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(screen.getByText('Guest Reservation')).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: formatHumanDate(openDate) })).toBeInTheDocument();
     });
 
     await user.click(screen.getByRole('button', { name: formatHumanDate(openDate) }));
@@ -431,7 +505,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(screen.getByText('Guest Reservation')).toBeInTheDocument();
@@ -514,7 +588,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();
@@ -526,9 +600,13 @@ describe('Scheduling Component', () => {
       expect(fetch).toHaveBeenNthCalledWith(4, '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: 'service1201' }),
+        body: JSON.stringify({ code: DEFAULT_STAFF_ACCESS_CODE }),
       });
       expect(screen.getByText('Add Slot')).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Tuesday, March 24' })).toBeInTheDocument();
     });
 
     await user.click(screen.getByRole('button', { name: 'Tuesday, March 24' }));
@@ -598,7 +676,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();
@@ -610,13 +688,13 @@ describe('Scheduling Component', () => {
       expect(screen.getByText('Add Slot')).toBeInTheDocument();
     });
 
-    expect(readStaffAccessCode()).toBe('service1201');
+    expect(readStaffAccessCode()).toBe(DEFAULT_STAFF_ACCESS_CODE);
   });
 
   test('auto reauthenticates staff controls with a remembered staff access cookie', async () => {
     const openDate = addDays(14);
-    document.cookie = 'bistro_guest_access_code=bistro1201; Path=/';
-    document.cookie = 'bistro_staff_access_code=service1201; Path=/';
+    document.cookie = `bistro_guest_access_code=${DEFAULT_GUEST_ACCESS_CODE}; Path=/`;
+    document.cookie = `bistro_staff_access_code=${DEFAULT_STAFF_ACCESS_CODE}; Path=/`;
     fetch
       .mockResolvedValueOnce({
         ok: true,
@@ -642,7 +720,7 @@ describe('Scheduling Component', () => {
       expect(fetch).toHaveBeenNthCalledWith(1, '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: 'service1201' }),
+        body: JSON.stringify({ code: DEFAULT_STAFF_ACCESS_CODE }),
       });
       expect(fetch).toHaveBeenCalledTimes(4);
     });
@@ -650,7 +728,7 @@ describe('Scheduling Component', () => {
 
   test('clears an invalid remembered staff access cookie', async () => {
     const openDate = addDays(14);
-    document.cookie = 'bistro_guest_access_code=bistro1201; Path=/';
+    document.cookie = `bistro_guest_access_code=${DEFAULT_GUEST_ACCESS_CODE}; Path=/`;
     document.cookie = 'bistro_staff_access_code=expired-staff; Path=/';
     fetch
       .mockResolvedValueOnce({
@@ -683,7 +761,7 @@ describe('Scheduling Component', () => {
       expect(fetch).toHaveBeenNthCalledWith(2, '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: 'bistro1201' }),
+        body: JSON.stringify({ code: DEFAULT_GUEST_ACCESS_CODE }),
       });
     });
 
@@ -736,7 +814,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();
@@ -812,7 +890,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();
@@ -903,7 +981,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();
@@ -1000,7 +1078,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();
@@ -1076,7 +1154,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(getInputByName('date')).toHaveValue(today);
@@ -1102,7 +1180,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(getInputByName('date')).toHaveValue(today);
@@ -1134,7 +1212,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(getInputByName('date')).toHaveValue(today);
@@ -1173,7 +1251,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(getInputByName('date')).toHaveValue(today);
@@ -1217,7 +1295,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(getInputByName('date')).toHaveValue('2026-03-15');
@@ -1253,7 +1331,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(getInputByName('date')).toHaveValue('2026-03-15');
@@ -1299,7 +1377,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(screen.getByText('March 2026')).toBeInTheDocument();
@@ -1370,7 +1448,7 @@ describe('Scheduling Component', () => {
 
     render(<Scheduling />);
 
-    await submitGuestAccessCode(user, 'bistro1201');
+    await submitGuestAccessCode(user, DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(screen.getByText('Unlock Staff Controls')).toBeInTheDocument();

@@ -11,7 +11,7 @@ use crate::db::{
     insert_gallery_image, update_gallery_event, update_gallery_image,
 };
 use crate::error::{ApiError, ErrorResponse};
-use crate::handlers::require_role;
+use crate::handlers::{require_role, require_service_key};
 use crate::models::{
     AccessRole, CreateGalleryEventRequest, CreateGalleryImageRequest, DeleteGalleryEventResponse,
     DeleteGalleryImageResponse, GalleryEventDetail, GalleryEventSummary, GalleryImageRecord,
@@ -87,6 +87,7 @@ pub(crate) async fn create_gallery_event(
     headers: HeaderMap,
     Json(payload): Json<CreateGalleryEventRequest>,
 ) -> std::result::Result<Json<GalleryEventSummary>, ApiError> {
+    require_service_key(&state, &headers)?;
     require_role(&state, &headers, AccessRole::Staff).await?;
     if payload.slug.trim().is_empty() {
         return Err(ApiError::bad_request("Slug is required"));
@@ -127,6 +128,7 @@ pub(crate) async fn delete_gallery_event_handler(
     headers: HeaderMap,
     Path(slug): Path<String>,
 ) -> std::result::Result<Json<DeleteGalleryEventResponse>, ApiError> {
+    require_service_key(&state, &headers)?;
     require_role(&state, &headers, AccessRole::Staff).await?;
     let removed = delete_gallery_event(&state.db, slug.trim())
         .await
@@ -145,6 +147,7 @@ pub(crate) async fn update_gallery_event_handler(
     Path(slug): Path<String>,
     Json(payload): Json<UpdateGalleryEventRequest>,
 ) -> std::result::Result<Json<GalleryEventSummary>, ApiError> {
+    require_service_key(&state, &headers)?;
     require_role(&state, &headers, AccessRole::Staff).await?;
     let updated = update_gallery_event(&state.db, slug.trim(), &payload)
         .await
@@ -162,6 +165,7 @@ pub(crate) async fn list_gallery_images(
     headers: HeaderMap,
     Path(slug): Path<String>,
 ) -> std::result::Result<Json<Vec<GalleryImageRecord>>, ApiError> {
+    require_service_key(&state, &headers)?;
     require_role(&state, &headers, AccessRole::Staff).await?;
     let images = fetch_gallery_images_for_event(&state.db, slug.trim())
         .await
@@ -179,6 +183,7 @@ pub(crate) async fn upload_gallery_file(
     Path(slug): Path<String>,
     mut multipart: Multipart,
 ) -> std::result::Result<Json<serde_json::Value>, ApiError> {
+    require_service_key(&state, &headers)?;
     require_role(&state, &headers, AccessRole::Staff).await?;
 
     let storage = state
@@ -249,6 +254,7 @@ pub(crate) async fn create_gallery_image(
     Path(slug): Path<String>,
     Json(payload): Json<CreateGalleryImageRequest>,
 ) -> std::result::Result<Json<GalleryImageRecord>, ApiError> {
+    require_service_key(&state, &headers)?;
     require_role(&state, &headers, AccessRole::Staff).await?;
     if payload.image_url.trim().is_empty() {
         return Err(ApiError::bad_request("Image URL is required"));
@@ -278,6 +284,7 @@ pub(crate) async fn update_gallery_image_handler(
     Path((slug, id)): Path<(String, i64)>,
     Json(payload): Json<UpdateGalleryImageRequest>,
 ) -> std::result::Result<Json<GalleryImageRecord>, ApiError> {
+    require_service_key(&state, &headers)?;
     require_role(&state, &headers, AccessRole::Staff).await?;
     let updated = update_gallery_image(&state.db, slug.trim(), id, &payload)
         .await
@@ -312,6 +319,7 @@ pub(crate) async fn delete_gallery_image_handler(
     headers: HeaderMap,
     Path((slug, id)): Path<(String, i64)>,
 ) -> std::result::Result<Json<DeleteGalleryImageResponse>, ApiError> {
+    require_service_key(&state, &headers)?;
     require_role(&state, &headers, AccessRole::Staff).await?;
     let removed = delete_gallery_image(&state.db, slug.trim(), id)
         .await

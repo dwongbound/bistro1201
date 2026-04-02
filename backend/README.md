@@ -32,9 +32,9 @@ handling.
 - `DATABASE_URL`: Postgres connection string used by the backend
 - `PORT`: Port the Rust server listens on
 - `GUEST_ACCESS_CODE`: Access code that can read availability and create
-  reservations in a fresh database bootstrap
-- `GUEST_ACCESS_CODE_EXPIRES_AT`: Optional expiration used only when
-  bootstrapping that default guest code into an empty database
+  reservations, and is ensured at backend startup
+- `GUEST_ACCESS_CODE_EXPIRES_AT`: Optional expiration applied to that default
+  guest code at backend startup
 - `STAFF_ACCESS_CODE`: Access code that can also open and close available dates
 - `SMTP_HOST`: Enables SMTP delivery for confirmation emails when set
 - `SMTP_PORT`: SMTP relay port, usually `587`
@@ -51,5 +51,5 @@ docker compose --env-file env/dev.env up -d postgres
 cd backend && DATABASE_URL=postgres://postgres:postgres@localhost:5432/bistro1201 cargo test
 ```
 
-Guest access codes persist in the Postgres `access_codes` table after
-bootstrap.
+Guest access codes persist in the Postgres `access_codes` table, and the
+env-configured default guest code is re-ensured at backend startup.

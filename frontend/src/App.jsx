@@ -85,7 +85,7 @@ function AppShell() {
               to="/"
               sx={{
                 color: 'primary.light',
-                fontSize: { xs: '1rem', sm: '1.15rem' },
+                fontSize: { xs: '1.15rem', sm: '1.3rem' },
                 textDecoration: 'none',
               }}
             >
@@ -144,6 +144,7 @@ function AppShell() {
                       alignSelf: 'stretch',
                       border: 'none',
                       textDecoration: 'none',
+                      fontFamily: '"Montserrat", sans-serif',
                       fontWeight: 700,
                       '&:hover': {
                         backgroundColor: 'transparent',
@@ -214,7 +215,7 @@ function AppShell() {
                   },
                 }}
               >
-                <ListItemText primary={item.label} />
+                <ListItemText primary={item.label} primaryTypographyProps={{ fontFamily: '"Montserrat", sans-serif', fontWeight: 600 }} />
               </ListItemButton>
             ))}
           </List>

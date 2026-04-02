@@ -184,7 +184,7 @@ function ReserveCalendarCard({
                     >
                       {day.getDate()}
                     </Typography>
-                    {hasVisibleAvailability && prioritizedDinnerTimes.length ? (
+                    {hasVisibleAvailability && prioritizedDinnerTimes.length && !isPast ? (
                       <Stack
                         direction="row"
                         alignItems="center"

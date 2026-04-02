@@ -91,8 +91,11 @@ function StaffControlsCard({
     if (!expiresAt) {
       return 'No expiration';
     }
-
-    return new Date(expiresAt * 1000).toLocaleString();
+    const date = new Date(expiresAt * 1000);
+    if (date < new Date()) {
+      return 'Expired';
+    }
+    return date.toLocaleString();
   };
 
   const handleRemoveSlot = async () => {
@@ -265,9 +268,6 @@ function StaffControlsCard({
                   >
                     <Box
                       sx={{
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1.5fr 1fr', sm: '1.7fr 1.1fr 132px' },
-                        gap: 2,
                         px: 1.75,
                         py: 1.25,
                         borderBottom: '1px solid rgba(217, 195, 161, 0.18)',
@@ -275,54 +275,44 @@ function StaffControlsCard({
                       }}
                     >
                       <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: '0.08em' }}>
-                        Code
-                      </Typography>
-                      <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: '0.08em' }}>
-                        Expires
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          display: { xs: 'none', sm: 'block' },
-                          fontWeight: 700,
-                          letterSpacing: '0.08em',
-                          textAlign: 'right',
-                        }}
-                      >
-                        Action
+                        Codes
                       </Typography>
                     </Box>
-                    {accessCodes.map((accessCode, index) => (
-                      <Box
-                        key={accessCode.code}
-                        sx={{
-                          display: 'grid',
-                          gridTemplateColumns: { xs: '1.5fr 1fr', sm: '1.7fr 1.1fr 132px' },
-                          gap: 2,
-                          px: 1.75,
-                          py: 1.25,
-                          alignItems: 'center',
-                          borderBottom:
-                            index === accessCodes.length - 1 ? 'none' : '1px solid rgba(217, 195, 161, 0.12)',
-                          backgroundColor: index % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
-                        }}
-                      >
-                        <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{accessCode.code}</Typography>
-                        <Typography color="text.secondary" variant="body2">
-                          {formatExpiration(accessCode.expires_at)}
-                        </Typography>
-                        <Button
-                          variant="text"
-                          color="secondary"
-                          onClick={() => onDeleteAccessCode(accessCode.code)}
-                          disabled={accessCodeBusy}
-                          fullWidth={isMobile}
-                          sx={{ justifySelf: { sm: 'end' } }}
+                    {accessCodes.map((accessCode, index) => {
+                      const expirationLabel = formatExpiration(accessCode.expires_at);
+                      const isExpired = expirationLabel === 'Expired';
+                      return (
+                        <Box
+                          key={accessCode.code}
+                          sx={{
+                            px: 1.75,
+                            py: 1.25,
+                            borderBottom:
+                              index === accessCodes.length - 1 ? 'none' : '1px solid rgba(217, 195, 161, 0.12)',
+                            backgroundColor: index % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
+                          }}
                         >
-                          Remove Code
-                        </Button>
-                      </Box>
-                    ))}
+                          <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{accessCode.code}</Typography>
+                          <Stack direction="row" alignItems="center" justifyContent="space-between">
+                            <Typography
+                              color={isExpired ? 'error' : 'text.secondary'}
+                              variant="body2"
+                            >
+                              {expirationLabel}
+                            </Typography>
+                            <Button
+                              variant="text"
+                              color="secondary"
+                              onClick={() => onDeleteAccessCode(accessCode.code)}
+                              disabled={accessCodeBusy}
+                              sx={{ px: 0, minWidth: 0 }}
+                            >
+                              Remove Code
+                            </Button>
+                          </Stack>
+                        </Box>
+                      );
+                    })}
                   </Box>
                 ) : (
                   <Typography color="text.secondary">No guest access codes are stored yet.</Typography>

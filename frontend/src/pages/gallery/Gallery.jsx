@@ -54,7 +54,7 @@ function Gallery() {
     <Box sx={{ display: 'grid', gap: 3 }}>
       <PageIntro
         eyebrow="Photos"
-        title="Event Gallery"
+        title="Collections"
         description="Browse past evenings, preview a few moments from each event, and open the full photo set for a closer look."
         descriptionProps={{ sx: { maxWidth: 760 } }}
       />

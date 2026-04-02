@@ -157,6 +157,9 @@ function Home() {
             flexShrink: 0,
           }}
         />
+        <Typography variant="h4">
+          Welcome to
+        </Typography>
         <Typography
           component="h1"
           variant="h2"
@@ -166,12 +169,7 @@ function Home() {
             letterSpacing: '-0.04em',
           }}
         >
-          <Box component="span" sx={{ display: 'block' }}>
-            Welcome to
-          </Box>
-          <Box component="span" sx={{ display: 'block', mt: 0.2, color: 'primary.light' }}>
-            <BrandWordmark sx={{ fontSize: '1em', letterSpacing: '0.05em' }} />
-          </Box>
+          <BrandWordmark sx={{ fontSize: '1em', letterSpacing: '0.05em' }} cycleSuffix/>
         </Typography>
         <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 640, lineHeight: 1.7 }}>
           An intimate supper club experience with refined plates, thoughtful pours, and an easy way

@@ -323,7 +323,7 @@ cd frontend && npm run test:e2e
 
 ```bash
 # Start the application services
-docker compose --env-file env/dev.env up -d
+docker compose --env-file env/dev.env --profile local up -d
 
 # Frontend unit tests
 docker compose exec frontend npm test -- --runInBand
@@ -355,7 +355,7 @@ Run tests in this order when possible:
 - Backend: `http://localhost:3000`
 - `nginx`: `http://localhost`
 - Database: `postgres://postgres:postgres@localhost:5432/bistro1201`
-- Start command: `docker compose --env-file env/dev.env up --build`
+- Start command: `docker compose --env-file env/dev.env --profile local up --build`
 
 ### Staging
 
@@ -554,9 +554,8 @@ replaceable.
 - The reserve page signs in against the backend and stores a server-issued
   session token.
 - Front-of-house staff can unlock `Staff Controls` with `STAFF_ACCESS_CODE`.
-- The default guest access code is permanent unless you explicitly set
-  `GUEST_ACCESS_CODE_EXPIRES_AT`, and it is only bootstrapped into a fresh
-  database.
+- The env-configured default guest access code is ensured on every backend
+  startup unless you explicitly set `GUEST_ACCESS_CODE_EXPIRES_AT`.
 - Guest access codes persist in the `access_codes` Postgres table, so additional
   codes can be managed through the staff UI and survive restarts.
 - Staff sessions can create and remove guest access codes directly from the
