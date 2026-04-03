@@ -168,7 +168,9 @@ describe('Scheduling Component', () => {
   });
 
   test('stores the staff access code too when the guest form logs in with a staff code', async () => {
-    const user = userEvent.setup();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-03-15T12:00:00Z'));
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     fetch
       .mockResolvedValueOnce({
         ok: true,
@@ -176,7 +178,7 @@ describe('Scheduling Component', () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => [],
+        json: async () => [{ date: '2026-03-24', dinner_time: '19:00' }],
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -218,6 +220,16 @@ describe('Scheduling Component', () => {
     expect(readGuestAccessCode()).toBe(DEFAULT_STAFF_ACCESS_CODE);
     expect(readStaffAccessCode()).toBe(DEFAULT_STAFF_ACCESS_CODE);
 
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Tuesday, March 24' })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Tuesday, March 24' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Remove Slot' })).not.toBeDisabled();
+    });
+
     await act(async () => {
       await user.click(screen.getByRole('button', { name: 'Remove Slot' }));
     });
@@ -230,6 +242,8 @@ describe('Scheduling Component', () => {
     expect(fetch.mock.calls[4][1].method).toBe('DELETE');
     expect(fetch.mock.calls[4][1].headers.get('Authorization')).toBe('Bearer staff-token');
     expect(fetch.mock.calls[4][1].headers.get('X-Service-Key')).toBe(DEFAULT_STAFF_ACCESS_CODE);
+
+    jest.useRealTimers();
   });
 
   test('auto reauthenticates with a remembered guest access cookie', async () => {

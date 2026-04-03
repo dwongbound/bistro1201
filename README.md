@@ -199,6 +199,37 @@ The intended flow is:
 
 This keeps image hosting, event metadata, and frontend deploys nicely decoupled.
 
+## Getting Started
+
+Before cloning the repo, install the following tools:
+
+1. **Git** — [git-scm.com/downloads](https://git-scm.com/downloads)
+
+2. **Docker Desktop** — [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/) (includes Docker Compose)
+
+3. **VS Code** — [code.visualstudio.com](https://code.visualstudio.com/) (recommended editor)
+
+Once installed:
+
+```bash
+# Clone the repo
+git clone https://github.com/your-org/bistro1201.git
+cd bistro1201
+
+# Copy the dev env file and fill in any missing values
+cp env/dev.env.example env/dev.env   # if an example exists, otherwise use env/dev.env directly
+
+# Start all services
+docker compose --env-file env/dev.env --profile local up --build
+```
+
+The app will be available at:
+- Frontend (Vite): `http://localhost:5173`
+- Backend (Rust/Axum): `http://localhost:3000`
+- nginx (production-style): `http://localhost`
+
+> **Tip:** Install the [Docker VS Code extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) to manage containers without leaving the editor.
+
 ## Setup
 
 App-specific guides:

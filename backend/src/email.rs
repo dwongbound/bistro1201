@@ -105,11 +105,24 @@ pub(crate) async fn send_cancellation_email(
     Ok(true)
 }
 
+/// Converts a "HH:MM" 24-hour time string to a "h:MM AM/PM" 12-hour string.
+fn format_12h(time: &str) -> String {
+    let mut parts = time.splitn(2, ':');
+    let hour: u32 = parts.next().and_then(|h| h.parse().ok()).unwrap_or(0);
+    let minute = parts.next().unwrap_or("00");
+    let period = if hour < 12 { "AM" } else { "PM" };
+    let display_hour = match hour % 12 {
+        0 => 12,
+        h => h,
+    };
+    format!("{}:{} {}", display_hour, minute, period)
+}
+
 /// Builds the plain-text confirmation email body from the configured template file.
 pub(crate) fn build_confirmation_email_body(template: &str, reservation: &Reservation) -> String {
     template
         .replace("{{date}}", &reservation.date)
-        .replace("{{time}}", &reservation.time)
+        .replace("{{time}}", &format_12h(&reservation.time))
         .replace("{{name}}", &reservation.name)
 }
 
@@ -117,7 +130,7 @@ pub(crate) fn build_confirmation_email_body(template: &str, reservation: &Reserv
 pub(crate) fn build_cancellation_email_body(template: &str, reservation: &Reservation) -> String {
     template
         .replace("{{date}}", &reservation.date)
-        .replace("{{time}}", &reservation.time)
+        .replace("{{time}}", &format_12h(&reservation.time))
         .replace("{{name}}", &reservation.name)
 }
 
@@ -198,7 +211,7 @@ pub(crate) fn load_email_config() -> std::result::Result<Option<EmailConfig>, Ap
         )),
         _ => None,
     };
-    let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(&host)
+    let mailer = AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&host)
         .map_err(|_| ApiError::internal("SMTP_HOST could not be used to create a mail relay"))?
         .port(port)
         .credentials(credentials)
@@ -231,14 +244,34 @@ mod tests {
     fn test_confirmation_body_substitutes_all_fields() {
         let template = "Hi {{name}}, your reservation on {{date}} at {{time}} is confirmed.";
         let body = build_confirmation_email_body(template, &test_reservation());
-        assert_eq!(body, "Hi Jane Doe, your reservation on 2026-12-25 at 19:00 is confirmed.");
+        assert_eq!(body, "Hi Jane Doe, your reservation on 2026-12-25 at 7:00 PM is confirmed.");
     }
 
     #[test]
     fn test_cancellation_body_substitutes_all_fields() {
         let template = "Hi {{name}}, your reservation on {{date}} at {{time}} has been cancelled.";
         let body = build_cancellation_email_body(template, &test_reservation());
-        assert_eq!(body, "Hi Jane Doe, your reservation on 2026-12-25 at 19:00 has been cancelled.");
+        assert_eq!(body, "Hi Jane Doe, your reservation on 2026-12-25 at 7:00 PM has been cancelled.");
+    }
+
+    #[test]
+    fn test_format_12h_afternoon() {
+        assert_eq!(format_12h("19:00"), "7:00 PM");
+    }
+
+    #[test]
+    fn test_format_12h_morning() {
+        assert_eq!(format_12h("08:30"), "8:30 AM");
+    }
+
+    #[test]
+    fn test_format_12h_noon() {
+        assert_eq!(format_12h("12:00"), "12:00 PM");
+    }
+
+    #[test]
+    fn test_format_12h_midnight() {
+        assert_eq!(format_12h("00:00"), "12:00 AM");
     }
 
     #[test]
