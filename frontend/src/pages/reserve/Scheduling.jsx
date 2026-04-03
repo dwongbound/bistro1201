@@ -122,10 +122,13 @@ function Scheduling() {
 
   /**
    * Sends authenticated requests through one shared helper so token handling stays consistent.
+   * The service key is read from the staff cookie so write endpoints can verify the caller's
+   * identity independently of the session token.
    */
   const apiFetch = createApiFetch({
     apiUrl,
     getToken: () => auth.token,
+    getServiceKey: () => readStaffAccessCode(),
     onUnauthorized: () => clearAuth(),
   });
 
@@ -313,6 +316,7 @@ function Scheduling() {
       }
 
       const payload = await response.json();
+      const loggedInAsStaff = payload.role === 'staff';
       updateAuth(payload);
       setAccessCode('');
       setStaffAccessCode('');
@@ -320,8 +324,11 @@ function Scheduling() {
         if (persistGuestCookie) {
           saveGuestAccessCode(trimmedCode);
         }
+        if (loggedInAsStaff && persistGuestCookie) {
+          saveStaffAccessCode(trimmedCode);
+        }
         setGuestCookieChecked(true);
-        setStaffCookieChecked(false);
+        setStaffCookieChecked(loggedInAsStaff);
       }
 
       if (upgradeToStaff) {
@@ -782,7 +789,7 @@ function Scheduling() {
   return (
     <Box sx={{ display: 'grid', gap: 4 }}>
       <PageIntro
-        eyebrow="Reserve"
+        eyebrow="Reservations"
         title="Reserve an Evening"
         description="This webpage is kept up to date with the latest open availabilities."
         titleProps={{ sx: { maxWidth: 760 } }}

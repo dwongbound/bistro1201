@@ -88,7 +88,7 @@ function Team() {
                 display: 'inline-flex',
                 alignItems: 'baseline',
                 gap: '0.02em',
-                fontFamily: '"Palatino Linotype", "Book Antiqua", Georgia, serif',
+                fontFamily: '"Montserrat", sans-serif',
                 fontWeight: 800,
                 letterSpacing: '0.08em',
                 lineHeight: 1,
@@ -124,7 +124,7 @@ function Team() {
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pb: { xs: 2.5, sm: 3 } }}>
                   <Stack spacing={2}>
                     <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 700, fontFamily: '"Montserrat", sans-serif' }}>
                         {member.name}
                       </Typography>
                       <Typography color="secondary.main" sx={{ fontWeight: 600 }}>

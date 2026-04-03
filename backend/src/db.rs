@@ -364,24 +364,8 @@ pub(crate) async fn upsert_access_code(pool: &PgPool, seed: &AccessCodeSeed) -> 
     Ok(())
 }
 
-/// Counts how many guest access codes are currently stored in Postgres.
-pub(crate) async fn count_guest_access_codes(pool: &PgPool) -> Result<i64> {
-    sqlx::query_scalar(
-        "SELECT COUNT(*)
-         FROM access_codes
-         WHERE role = $1",
-    )
-    .bind(GUEST_ROLE)
-    .fetch_one(pool)
-    .await
-}
-
-/// Bootstraps the default guest access code only when the database has no guest codes yet.
+/// Ensures the env-configured default guest access code exists alongside any staff-managed codes.
 pub(crate) async fn ensure_default_guest_access_code(pool: &PgPool, seed: &AccessCodeSeed) -> Result<()> {
-    if count_guest_access_codes(pool).await? > 0 {
-        return Ok(());
-    }
-
     upsert_access_code(pool, seed).await
 }
 
@@ -1055,7 +1039,7 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn test_default_guest_access_code_only_bootstraps_empty_database(pool: PgPool) {
+    async fn test_default_guest_access_code_is_always_present(pool: PgPool) {
         let pool = fresh_pool(pool).await;
 
         upsert_access_code(
@@ -1088,7 +1072,7 @@ mod tests {
         let bootstrap = resolve_access_code(&pool, "bootstrap-guest", "staff-constant")
             .await
             .unwrap();
-        assert!(matches!(bootstrap, AccessCodeLookup::Missing));
+        assert!(matches!(bootstrap, AccessCodeLookup::Valid(ref role) if role == GUEST_ROLE));
     }
 
     #[sqlx::test]

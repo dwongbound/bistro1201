@@ -126,7 +126,7 @@ async fn main() {
         .unwrap_or_else(|_| "3000".to_string())
         .parse()
         .unwrap();
-    let staff_access_code = env::var("STAFF_ACCESS_CODE").unwrap_or_else(|_| "service1201".to_string());
+    let staff_access_code = env::var("STAFF_ACCESS_CODE").expect("STAFF_ACCESS_CODE must be set");
     let default_guest_access_code = load_default_guest_access_code_from_env().unwrap();
 
     let db = init_db(&database_url).await.unwrap();
@@ -171,7 +171,7 @@ mod tests {
         AppState {
             db: pool,
             email: None,
-            staff_access_code: "service1201".to_string(),
+            staff_access_code: "1201bistroteam".to_string(),
             storage: None,
         }
     }
@@ -252,6 +252,7 @@ mod tests {
                     .method("DELETE")
                     .uri("/api/availability/2026-12-25?dinner_time=19%3A00")
                     .header("Authorization", format!("Bearer {token}"))
+                    .header("X-Service-Key", "1201bistroteam")
                     .body(Body::empty())
                     .unwrap(),
             )

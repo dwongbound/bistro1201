@@ -47,6 +47,7 @@ export const appTheme = createTheme({
       fontSize: 'clamp(2.75rem, 7vw, 4.75rem)',
     },
     h3: {
+      fontFamily: '"Palatino Linotype", "Book Antiqua", Georgia, serif',
       fontSize: 'clamp(2rem, 5vw, 3rem)',
     },
   },

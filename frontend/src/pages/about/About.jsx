@@ -36,10 +36,7 @@ function About() {
         title={
           <>
             <Box component="span" sx={{ display: 'block' }}>
-              About
-            </Box>
-            <Box component="span" sx={{ display: 'block', mt: 0.2, color: 'primary.light' }}>
-              <BrandWordmark sx={{ fontSize: '1em', letterSpacing: '0.05em' }} />
+              About <BrandWordmark sx={{ fontSize: '1em', letterSpacing: '0.05em' }} />
             </Box>
           </>
         }

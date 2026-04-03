@@ -40,3 +40,4 @@ env/staging.env
 # Misc caches
 .cache
 .ruff_cache/
+.claude/

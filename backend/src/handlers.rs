@@ -192,6 +192,7 @@ pub(crate) async fn delete_reservation(
     Path(date): Path<String>,
     Query(params): Query<DeleteReservationParams>,
 ) -> std::result::Result<Json<DeleteReservationResponse>, ApiError> {
+    require_service_key(&state, &headers)?;
     require_role(&state, &headers, AccessRole::Staff).await?;
     let time = params
         .time
@@ -269,6 +270,7 @@ pub(crate) async fn create_available_date(
     headers: HeaderMap,
     Json(availability): Json<AvailabilityDate>,
 ) -> std::result::Result<Json<AvailabilityDate>, ApiError> {
+    require_service_key(&state, &headers)?;
     require_role(&state, &headers, AccessRole::Staff).await?;
     if availability.date.trim().is_empty() {
         return Err(ApiError::bad_request("Date is required"));
@@ -315,6 +317,7 @@ pub(crate) async fn delete_available_date(
     Path(date): Path<String>,
     Query(params): Query<DeleteAvailabilityParams>,
 ) -> std::result::Result<Json<DeleteAvailabilityResponse>, ApiError> {
+    require_service_key(&state, &headers)?;
     require_role(&state, &headers, AccessRole::Staff).await?;
     let dinner_time = params
         .dinner_time
@@ -405,6 +408,7 @@ pub(crate) async fn create_access_code(
     headers: HeaderMap,
     Json(payload): Json<CreateAccessCodeRequest>,
 ) -> std::result::Result<Json<AccessCodeRecord>, ApiError> {
+    require_service_key(&state, &headers)?;
     require_role(&state, &headers, AccessRole::Staff).await?;
     let code = payload.code.trim();
     if code.is_empty() {
@@ -467,6 +471,7 @@ pub(crate) async fn delete_access_code(
     headers: HeaderMap,
     Path(code): Path<String>,
 ) -> std::result::Result<Json<AccessCodeRecord>, ApiError> {
+    require_service_key(&state, &headers)?;
     require_role(&state, &headers, AccessRole::Staff).await?;
     let trimmed_code = code.trim();
     if trimmed_code.is_empty() {
@@ -509,6 +514,27 @@ pub(crate) async fn require_role(
     }
 
     Ok(role)
+}
+
+/// Validates the X-Service-Key header against the configured service key.
+///
+/// Call this alongside `require_role` on every staff write endpoint so that a
+/// stolen session token alone is not enough to mutate data.
+pub(crate) fn require_service_key(state: &AppState, headers: &HeaderMap) -> std::result::Result<(), ApiError> {
+    let provided = headers
+        .get("X-Service-Key")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+
+    if provided.is_empty() {
+        return Err(ApiError::unauthorized("Missing service key"));
+    }
+
+    if provided != state.staff_access_code {
+        return Err(ApiError::forbidden("Invalid service key"));
+    }
+
+    Ok(())
 }
 
 /// Extracts the bearer token from the Authorization header.

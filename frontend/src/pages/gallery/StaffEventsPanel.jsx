@@ -336,9 +336,9 @@ function StaffEventsPanel({ apiFetch }) {
                       startIcon={<EditRoundedIcon />}
                       variant={editingSlug === event.slug ? 'contained' : 'outlined'}
                       onClick={() => editingSlug === event.slug ? setEditingSlug(null) : startEditing(event)}
-                      sx={{ minWidth: 0 }}
+                      sx={{ minWidth: 0, px: { xs: 1, sm: undefined }, '& .MuiButton-startIcon': { mx: { xs: 0, sm: undefined } } }}
                     >
-                      Edit
+                      <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Edit</Box>
                     </Button>
                     <Button
                       size="small"
@@ -346,18 +346,18 @@ function StaffEventsPanel({ apiFetch }) {
                       startIcon={<DeleteRoundedIcon />}
                       variant="outlined"
                       onClick={() => setDeleteEventDialog(event)}
-                      sx={{ minWidth: 0, borderColor: 'rgba(211,47,47,0.4)' }}
+                      sx={{ minWidth: 0, borderColor: 'rgba(211,47,47,0.4)', px: { xs: 1, sm: undefined }, '& .MuiButton-startIcon': { mx: { xs: 0, sm: undefined } } }}
                     >
-                      Delete
+                      <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Delete</Box>
                     </Button>
                     <Button
                       size="small"
                       startIcon={<AddPhotoAlternateRoundedIcon />}
                       variant="outlined"
                       onClick={() => openManage(event)}
-                      sx={{ minWidth: 0 }}
+                      sx={{ minWidth: 0, px: { xs: 1, sm: undefined }, '& .MuiButton-startIcon': { mx: { xs: 0, sm: undefined } } }}
                     >
-                      Manage
+                      <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Manage</Box>
                     </Button>
                   </Stack>
                 </Stack>
@@ -574,7 +574,7 @@ function StaffEventsPanel({ apiFetch }) {
               ) : (
                 <Stack alignItems="center" justifyContent="center" spacing={1} sx={{ py: 4 }}>
                   <PhotoCameraRoundedIcon sx={{ fontSize: 32, color: 'text.secondary', opacity: 0.45 }} />
-                  <Typography color="text.secondary" sx={{ fontSize: '0.9rem' }}>Tap to pick photos</Typography>
+                  <Typography color="text.secondary" sx={{ fontSize: '0.9rem' }}>Add photos</Typography>
                 </Stack>
               )}
             </Box>

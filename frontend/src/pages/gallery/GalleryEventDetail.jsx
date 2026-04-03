@@ -138,9 +138,12 @@ function GalleryEventDetail() {
                 src={image.src}
                 alt={image.alt}
                 loading="lazy"
+                onLoad={(e) => { e.currentTarget.style.opacity = '1'; }}
                 sx={{
                   width: '100%',
                   display: 'block',
+                  opacity: 0,
+                  transition: 'opacity 1s ease',
                 }}
               />
             </Box>
