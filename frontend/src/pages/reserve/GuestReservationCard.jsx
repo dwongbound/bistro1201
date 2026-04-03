@@ -32,6 +32,7 @@ function GuestReservationCard({
           onChange={onInputChange}
           value={form.date}
           availableDateSet={availableDateSet}
+          disablePast
         />
 
         <Stack spacing={1}>

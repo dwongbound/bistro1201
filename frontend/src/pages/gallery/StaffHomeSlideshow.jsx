@@ -291,7 +291,7 @@ function StaffHomeSlideshow({ apiFetch }) {
             ) : (
               <Stack alignItems="center" justifyContent="center" spacing={0.5} sx={{ py: 3 }}>
                 <PhotoCameraRoundedIcon sx={{ fontSize: 28, color: 'text.secondary', opacity: 0.45 }} />
-                <Typography color="text.secondary" sx={{ fontSize: '0.85rem' }}>Tap to pick photos</Typography>
+                <Typography color="text.secondary" sx={{ fontSize: '0.85rem' }}>Add photos</Typography>
               </Stack>
             )}
           </Box>

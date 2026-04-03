@@ -131,6 +131,7 @@ function getTodayDateKey() {
 function StyledDateInput({
   allowClear = false,
   availableDateSet,
+  disablePast = false,
   helperText,
   id,
   label,
@@ -171,6 +172,9 @@ function StyledDateInput({
   };
 
   const isDateDisabled = (dateKey) => {
+    if (disablePast && dateKey < getTodayDateKey()) {
+      return true;
+    }
     if (min && dateKey < min) {
       return true;
     }
@@ -386,7 +390,7 @@ function StyledDateInput({
                   }}
                 >
                   {day.getDate()}
-                  {isAvailable && !isSelected ? (
+                  {isAvailable && !isSelected && !disabled ? (
                     <Box
                       data-testid="availability-dot"
                       sx={{

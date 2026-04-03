@@ -199,6 +199,37 @@ The intended flow is:
 
 This keeps image hosting, event metadata, and frontend deploys nicely decoupled.
 
+## Getting Started
+
+Before cloning the repo, install the following tools:
+
+1. **Git** — [git-scm.com/downloads](https://git-scm.com/downloads)
+
+2. **Docker Desktop** — [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/) (includes Docker Compose)
+
+3. **VS Code** — [code.visualstudio.com](https://code.visualstudio.com/) (recommended editor)
+
+Once installed:
+
+```bash
+# Clone the repo
+git clone https://github.com/your-org/bistro1201.git
+cd bistro1201
+
+# Copy the dev env file and fill in any missing values
+cp env/dev.env.example env/dev.env   # if an example exists, otherwise use env/dev.env directly
+
+# Start all services
+docker compose --env-file env/dev.env --profile local up --build
+```
+
+The app will be available at:
+- Frontend (Vite): `http://localhost:5173`
+- Backend (Rust/Axum): `http://localhost:3000`
+- nginx (production-style): `http://localhost`
+
+> **Tip:** Install the [Docker VS Code extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) to manage containers without leaving the editor.
+
 ## Setup
 
 App-specific guides:
@@ -323,7 +354,7 @@ cd frontend && npm run test:e2e
 
 ```bash
 # Start the application services
-docker compose --env-file env/dev.env up -d
+docker compose --env-file env/dev.env --profile local up -d
 
 # Frontend unit tests
 docker compose exec frontend npm test -- --runInBand
@@ -355,7 +386,7 @@ Run tests in this order when possible:
 - Backend: `http://localhost:3000`
 - `nginx`: `http://localhost`
 - Database: `postgres://postgres:postgres@localhost:5432/bistro1201`
-- Start command: `docker compose --env-file env/dev.env up --build`
+- Start command: `docker compose --env-file env/dev.env --profile local up --build`
 
 ### Staging
 
@@ -554,9 +585,8 @@ replaceable.
 - The reserve page signs in against the backend and stores a server-issued
   session token.
 - Front-of-house staff can unlock `Staff Controls` with `STAFF_ACCESS_CODE`.
-- The default guest access code is permanent unless you explicitly set
-  `GUEST_ACCESS_CODE_EXPIRES_AT`, and it is only bootstrapped into a fresh
-  database.
+- The env-configured default guest access code is ensured on every backend
+  startup unless you explicitly set `GUEST_ACCESS_CODE_EXPIRES_AT`.
 - Guest access codes persist in the `access_codes` Postgres table, so additional
   codes can be managed through the staff UI and survive restarts.
 - Staff sessions can create and remove guest access codes directly from the

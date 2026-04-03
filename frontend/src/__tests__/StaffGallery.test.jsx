@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { DEFAULT_GUEST_ACCESS_CODE, DEFAULT_STAFF_ACCESS_CODE } from '../test/accessCodeFixtures';
 import StaffGallery, { titleToSlug } from '../pages/gallery/StaffGallery';
 import { fetchGalleryEvents } from '../pages/gallery/galleryApi';
 import {
@@ -54,7 +54,7 @@ async function performLogin(code) {
 
 async function loginAsStaff() {
   mockFetchLogin(true, { token: 'staff-token', role: 'staff' });
-  await performLogin('service1201');
+  await performLogin(DEFAULT_STAFF_ACCESS_CODE);
   await waitFor(() => {
     expect(screen.getByRole('button', { name: /Sign Out/i })).toBeInTheDocument();
   });
@@ -129,7 +129,7 @@ describe('StaffGallery', () => {
     mockFetchLogin(true, { token: 'guest-token', role: 'guest' });
     renderGallery();
 
-    await performLogin('bistro1201');
+    await performLogin(DEFAULT_GUEST_ACCESS_CODE);
 
     await waitFor(() => {
       expect(screen.getByText('This page requires a staff access code.')).toBeInTheDocument();
@@ -223,7 +223,7 @@ describe('StaffGallery', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
-    expect(screen.getByText(/Add Photos/i)).toBeInTheDocument();
+    expect(screen.getByText(/Add photos/i)).toBeInTheDocument();
   });
 
   test('clicking Delete opens a confirmation dialog', async () => {
@@ -245,7 +245,6 @@ describe('StaffGallery', () => {
   });
 
   test('uploading a home slideshow photo stores it under the home event and reloads the preview list', async () => {
-    const user = userEvent.setup();
     fetchAdminEventImages
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
@@ -267,8 +266,6 @@ describe('StaffGallery', () => {
 
     const file = new File(['home-slide'], 'hero-home.jpg', { type: 'image/jpeg' });
     fireEvent.change(fileInputs[0], { target: { files: [file] } });
-
-    await user.click(screen.getByRole('button', { name: 'Add Photo' }));
 
     await waitFor(() => {
       expect(createGalleryEvent).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ slug: 'home' }));
