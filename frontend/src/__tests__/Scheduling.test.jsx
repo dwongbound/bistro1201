@@ -176,13 +176,14 @@ describe('Scheduling Component', () => {
         ok: true,
         json: async () => ({ token: 'staff-token', role: 'staff' }),
       })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [{ date: '2026-03-24', dinner_time: '19:00' }],
-      })
+      // Promise.all order: [/reservations, /availability]
       .mockResolvedValueOnce({
         ok: true,
         json: async () => [],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [{ date: '2026-03-24', dinner_time: '19:00' }],
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -195,18 +196,6 @@ describe('Scheduling Component', () => {
           removed_reservation: null,
           cancellation_email_sent: false,
         }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [],
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [],
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [],
       });
 
     render(<Scheduling />);
@@ -230,12 +219,17 @@ describe('Scheduling Component', () => {
       expect(screen.getByRole('button', { name: 'Remove Slot' })).not.toBeDisabled();
     });
 
+    await user.click(screen.getByRole('button', { name: 'Remove Slot' }));
+
+    const removeDialog = await waitFor(() => screen.getByRole('dialog', { name: 'Remove Dinner Slot' }));
+    await user.click(within(removeDialog).getByRole('button', { name: '7:00 PM' }));
+
     await act(async () => {
-      await user.click(screen.getByRole('button', { name: 'Remove Slot' }));
+      await user.click(within(removeDialog).getByRole('button', { name: 'Confirm' }));
     });
 
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledTimes(8);
+      expect(fetch).toHaveBeenCalledTimes(5);
     });
 
     expect(fetch.mock.calls[4][0]).toBe('/api/availability/2026-03-24?dinner_time=19%3A00');
