@@ -443,9 +443,14 @@ test.describe('1201 Bistro Website', () => {
 
     // Authenticated gallery admin panel is rendered
     await expect(page.getByRole('button', { name: /Sign Out/i })).toBeVisible();
+    await expect(page.getByText('Home Slideshow')).toBeVisible();
     await expect(page.getByText('New Event')).toBeVisible();
-    await expect(page.getByLabel(/^Slug/)).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Events' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Events/i, level: 6 })).toBeVisible();
+
+    // New Event create form shows an auto-generated slug
+    await page.getByText('New Event').click();
+    await page.getByLabel(/^Title/).fill('Spring Supper 2026');
+    await expect(page.getByText(/Slug: spring_supper_2026/)).toBeVisible();
   });
 
   test('should keep an opened reservation slot visible after leaving reserve and coming back', async ({ page }) => {
