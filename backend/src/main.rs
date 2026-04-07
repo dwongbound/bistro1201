@@ -7,6 +7,7 @@ mod handlers;
 mod models;
 mod state;
 mod storage;
+mod waitlist;
 
 use axum::{
     extract::DefaultBodyLimit,
@@ -33,6 +34,10 @@ use crate::handlers::{
     create_access_code, create_available_date, create_reservation, delete_access_code, delete_available_date,
     delete_reservation, get_access_codes, get_available_dates, get_reservations, health, login, root,
 };
+use crate::waitlist::{
+    contact_waitlist_entry_handler, create_waitlist_entry, delete_waitlist_entry_handler,
+    get_waitlist, reorder_waitlist_handler, update_waitlist_note_handler,
+};
 use crate::state::AppState;
 
 /// Builds the shared Axum router so both `main` and backend tests exercise the same routes.
@@ -53,6 +58,11 @@ fn build_app(state: AppState) -> Router {
         .route("/api/reservations/:date", delete(delete_reservation))
         .route("/api/availability", get(get_available_dates).post(create_available_date))
         .route("/api/availability/:date", delete(delete_available_date))
+        .route("/api/waitlist", get(get_waitlist).post(create_waitlist_entry))
+        .route("/api/waitlist/reorder", axum::routing::patch(reorder_waitlist_handler))
+        .route("/api/waitlist/:id", delete(delete_waitlist_entry_handler))
+        .route("/api/waitlist/:id/note", axum::routing::patch(update_waitlist_note_handler))
+        .route("/api/waitlist/:id/contact", post(contact_waitlist_entry_handler))
         .with_state(state)
         .layer(CorsLayer::permissive())
         .layer(

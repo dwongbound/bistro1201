@@ -20,14 +20,14 @@ export function useFormErrors() {
 
   /**
    * Validates a plain object of { fieldName: value } pairs.
-   * Marks any field whose trimmed value is empty as required.
+   * Marks any field whose trimmed value is empty as invalid.
    * Returns true when all fields pass.
    */
   const validate = useCallback((fields) => {
     const next = {};
     for (const [name, value] of Object.entries(fields)) {
       if (!value || (typeof value === 'string' && !value.trim())) {
-        next[name] = 'Required.';
+        next[name] = true;
       }
     }
     setErrors(next);

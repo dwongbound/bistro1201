@@ -30,7 +30,7 @@ jest.mock('../common/apiClient', () => ({
   createApiFetch: jest.fn(() => jest.fn()),
 }));
 
-const GALLERY_STAFF_COOKIE = 'bistro_gallery_staff_code';
+const SHARED_STAFF_COOKIE = 'bistro_staff_access_code';
 
 function renderGallery() {
   return render(
@@ -93,7 +93,7 @@ describe('titleToSlug', () => {
 describe('StaffGallery', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    document.cookie = `${GALLERY_STAFF_COOKIE}=; Max-Age=0; Path=/`;
+    document.cookie = `${SHARED_STAFF_COOKIE}=; Max-Age=0; Path=/`;
     fetchGalleryEvents.mockResolvedValue([]);
     fetchAdminEventImages.mockResolvedValue([]);
     createGalleryEvent.mockResolvedValue({});
@@ -188,8 +188,8 @@ describe('StaffGallery', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create Event' }));
 
     await waitFor(() => {
-      const requiredMessages = screen.getAllByText('Required.');
-      expect(requiredMessages.length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByLabelText(/title/i)).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByLabelText(/date label/i)).toHaveAttribute('aria-invalid', 'true');
     });
     expect(createGalleryEvent).not.toHaveBeenCalled();
   });

@@ -488,6 +488,79 @@ test.describe('1201 Bistro Website', () => {
     await expect(page.getByRole('button', { name: persistentDinnerTimeLabel })).toBeVisible();
     await expect(page.locator('input[name="date"]')).toHaveValue(targetDate);
   });
+
+  test('should show the waitlist form below the access gate on the reserve page', async ({ page }) => {
+    await page.goto('/reserve');
+    await expect(page.getByRole('heading', { name: /enter an access code/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /join the waitlist/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /join the waitlist/i })).toBeVisible();
+  });
+
+  test('should submit a waitlist entry and show a success message', async ({ page }) => {
+    await page.goto('/reserve');
+    await expect(page.getByRole('heading', { name: /join the waitlist/i })).toBeVisible();
+
+    await page.getByRole('textbox', { name: /first name/i }).fill('Alice');
+    await page.getByRole('textbox', { name: /last name/i }).fill('Test');
+    await page.getByRole('textbox', { name: /email/i }).fill('alice.e2e@example.com');
+    await page.getByRole('textbox', { name: /phone/i }).fill('555-1234');
+    await page.getByRole('button', { name: /join the waitlist/i }).click();
+
+    await expect(page.getByRole('alert')).toContainText(/you're on the waitlist/i);
+  });
+
+  test('should load the waitlist admin page and allow staff to manage entries', async ({ page, request }) => {
+    // Seed one entry via the API so the list is not empty.
+    const addResponse = await request.post('/api/waitlist', {
+      data: {
+        first_name: 'Bob',
+        last_name: 'E2E',
+        email: 'bob.e2e@example.com',
+        phone: '555-9999',
+        notes: 'E2E test entry',
+      },
+    });
+    expect(addResponse.ok()).toBeTruthy();
+    const seededEntry = await addResponse.json();
+
+    try {
+      await page.goto('/staff/waitlist');
+      await expect(page.getByRole('heading', { name: /waitlist admin/i })).toBeVisible();
+
+      // Sign in with the staff code.
+      await page.getByLabel(/staff access code/i).fill(DEFAULT_STAFF_ACCESS_CODE);
+      await page.getByRole('button', { name: /sign in/i }).click();
+
+      // The seeded entry should be visible.
+      await expect(page.getByText('Bob E2E')).toBeVisible();
+      await expect(page.getByText('bob.e2e@example.com')).toBeVisible();
+
+      // Add a staff note.
+      await page.getByRole('button', { name: /edit note for bob e2e/i }).click();
+      const noteDialog = page.getByRole('dialog', { name: /staff note/i });
+      await expect(noteDialog).toBeVisible();
+      await noteDialog.getByRole('textbox', { name: /note/i }).fill('VIP');
+      await noteDialog.getByRole('button', { name: /save note/i }).click();
+      await expect(page.getByText(/note: vip/i)).toBeVisible();
+
+      // Delete the entry.
+      await page.getByRole('button', { name: /delete bob e2e/i }).click();
+      const deleteDialog = page.getByRole('dialog', { name: /remove from waitlist/i });
+      await expect(deleteDialog).toBeVisible();
+      await deleteDialog.getByRole('button', { name: /remove/i }).click();
+      // Check the email row is gone (the name still appears in the success alert).
+      await expect(page.getByText('bob.e2e@example.com')).not.toBeVisible();
+    } finally {
+      // Best-effort cleanup in case the delete inside the test didn't run.
+      const loginRes = await request.post('/api/auth/login', { data: { code: DEFAULT_STAFF_ACCESS_CODE } });
+      if (loginRes.ok()) {
+        const { token } = await loginRes.json();
+        await request.delete(`/api/waitlist/${seededEntry.id}`, {
+          headers: { Authorization: `Bearer ${token}`, 'X-Service-Key': DEFAULT_STAFF_ACCESS_CODE },
+        }).catch(() => {});
+      }
+    }
+  });
 });
 
 function formatIsoDate(date) {
