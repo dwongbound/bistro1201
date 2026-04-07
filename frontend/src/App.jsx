@@ -28,6 +28,7 @@ import Gallery from './pages/gallery/Gallery';
 import GalleryEventDetail from './pages/gallery/GalleryEventDetail';
 import Scheduling from './pages/reserve/Scheduling';
 import StaffGallery from './pages/gallery/StaffGallery';
+import StaffWaitlist from './pages/reserve/StaffWaitlist';
 
 /**
  * Keeps route selection in the shell while delegating transition visuals to a shared component.
@@ -47,6 +48,7 @@ function AppRoutes() {
       <Route path="/scheduling" element={<Scheduling />} />
       <Route path="/reserve" element={<Scheduling />} />
       <Route path="/staff/gallery" element={<StaffGallery />} />
+      <Route path="/staff/waitlist" element={<StaffWaitlist />} />
     </Routes>
   );
 

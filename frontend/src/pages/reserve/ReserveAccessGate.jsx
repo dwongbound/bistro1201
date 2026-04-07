@@ -1,10 +1,21 @@
-import { Alert, Button, Chip, Grid, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Button, Grid, Stack, TextField, Typography } from '@mui/material';
+import { useFormErrors } from '../../common/useFormErrors';
 import SurfaceCard from '../../common/SurfaceCard';
 
 /**
  * Renders the initial access-code gate shown before a reserve session is created.
  */
 function ReserveAccessGate({ accessCode, authBusy, authStatus, onAccessCodeChange, onSubmit }) {
+  const { errors, validate, clearError } = useFormErrors();
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (!validate({ access_code: accessCode })) {
+      return;
+    }
+    onSubmit(event);
+  };
+
   return (
     <Grid container spacing={4} alignItems="stretch">
       <Grid size={{ xs: 12, md: 6 }}>
@@ -17,11 +28,6 @@ function ReserveAccessGate({ accessCode, authBusy, authStatus, onAccessCodeChang
           contentSx={{ p: { xs: 3, sm: 4 } }}
         >
           <Stack spacing={2}>
-            <Chip
-              label="Protected Reserve Access"
-              sx={{ width: 'fit-content', color: 'inherit', borderColor: 'rgba(255,255,255,0.4)' }}
-              variant="outlined"
-            />
             <Typography variant="h3" sx={{ fontWeight: 800 }}>
               Enter an Access Code
             </Typography>
@@ -34,7 +40,7 @@ function ReserveAccessGate({ accessCode, authBusy, authStatus, onAccessCodeChang
       </Grid>
       <Grid size={{ xs: 12, md: 6 }}>
         <SurfaceCard cardSx={{ minHeight: '100%' }} contentSx={{ p: { xs: 3, sm: 4 } }}>
-          <Stack component="form" onSubmit={onSubmit} spacing={3}>
+          <Stack component="form" onSubmit={handleSubmit} spacing={3} noValidate>
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
               Reserve Access
             </Typography>
@@ -42,9 +48,13 @@ function ReserveAccessGate({ accessCode, authBusy, authStatus, onAccessCodeChang
               type="password"
               label="Access Code"
               value={accessCode}
-              onChange={onAccessCodeChange}
+              onChange={(event) => {
+                clearError('access_code');
+                onAccessCodeChange(event);
+              }}
               placeholder="Access Code"
-              required
+              error={Boolean(errors.access_code)}
+              helperText={errors.access_code}
               fullWidth
             />
             <Button type="submit" variant="contained" size="large" disabled={authBusy}>

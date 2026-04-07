@@ -1,6 +1,7 @@
 use crate::error::ApiError;
-use crate::models::Reservation;
+use crate::models::{Reservation, WaitlistEntry};
 use crate::state::AppState;
+use chrono::{NaiveDate, TimeZone, Utc};
 use lettre::message::{Mailbox, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
@@ -10,6 +11,7 @@ use std::fs;
 type Mailer = AsyncSmtpTransport<Tokio1Executor>;
 const DEFAULT_CONFIRMATION_TEMPLATE_PATH: &str = "/app/templates/reservation_confirmation.txt";
 const DEFAULT_CANCELLATION_TEMPLATE_PATH: &str = "/app/templates/reservation_cancellation.txt";
+const DEFAULT_WAITLIST_CONTACT_TEMPLATE_PATH: &str = "/app/templates/waitlist_contact.txt";
 
 /// Holds SMTP settings used to send reservation confirmation emails.
 #[derive(Clone)]
@@ -19,6 +21,7 @@ pub(crate) struct EmailConfig {
     pub(crate) reply_to: Option<Mailbox>,
     pub(crate) confirmation_template: String,
     pub(crate) cancellation_template: String,
+    pub(crate) waitlist_contact_template: String,
 }
 
 /// Sends a reservation confirmation email when SMTP settings are configured.
@@ -105,6 +108,13 @@ pub(crate) async fn send_cancellation_email(
     Ok(true)
 }
 
+/// Formats a "YYYY-MM-DD" date string as "Thursday June 15, 2026".
+fn format_date_human(date: &str) -> String {
+    NaiveDate::parse_from_str(date, "%Y-%m-%d")
+        .map(|d| d.format("%A %B %-d, %Y").to_string())
+        .unwrap_or_else(|_| date.to_string())
+}
+
 /// Converts a "HH:MM" 24-hour time string to a "h:MM AM/PM" 12-hour string.
 fn format_12h(time: &str) -> String {
     let mut parts = time.splitn(2, ':');
@@ -121,7 +131,7 @@ fn format_12h(time: &str) -> String {
 /// Builds the plain-text confirmation email body from the configured template file.
 pub(crate) fn build_confirmation_email_body(template: &str, reservation: &Reservation) -> String {
     template
-        .replace("{{date}}", &reservation.date)
+        .replace("{{date}}", &format_date_human(&reservation.date))
         .replace("{{time}}", &format_12h(&reservation.time))
         .replace("{{name}}", &reservation.name)
 }
@@ -129,9 +139,77 @@ pub(crate) fn build_confirmation_email_body(template: &str, reservation: &Reserv
 /// Builds the plain-text cancellation email body from the configured template file.
 pub(crate) fn build_cancellation_email_body(template: &str, reservation: &Reservation) -> String {
     template
-        .replace("{{date}}", &reservation.date)
+        .replace("{{date}}", &format_date_human(&reservation.date))
         .replace("{{time}}", &format_12h(&reservation.time))
         .replace("{{name}}", &reservation.name)
+}
+
+/// Builds the waitlist contact email body substituting the guest's name, code, and expiration.
+pub(crate) fn build_waitlist_contact_email_body(
+    template: &str,
+    entry: &WaitlistEntry,
+    code: &str,
+    expires_at: i64,
+) -> String {
+    let name = format!("{} {}", entry.first_name, entry.last_name);
+    let expires = Utc
+        .timestamp_opt(expires_at, 0)
+        .single()
+        .map(|dt| dt.format("%A %B %-d, %Y at %-I:%M %p UTC").to_string())
+        .unwrap_or_else(|| expires_at.to_string());
+    template
+        .replace("{{name}}", &name)
+        .replace("{{code}}", code)
+        .replace("{{expires}}", &expires)
+}
+
+/// Sends a waitlist contact email with the temporary guest access code.
+pub(crate) async fn send_waitlist_contact_email(
+    state: &AppState,
+    entry: &WaitlistEntry,
+    code: &str,
+    expires_at: i64,
+) -> std::result::Result<bool, ApiError> {
+    let recipient = entry.email.trim();
+    if recipient.is_empty() {
+        return Ok(false);
+    }
+
+    let Some(email_config) = state.email.as_ref() else {
+        return Ok(false);
+    };
+
+    let to: Mailbox = recipient
+        .parse()
+        .map_err(|_| ApiError::bad_request("The waitlist email address is invalid"))?;
+    let mut email_builder = Message::builder()
+        .from(email_config.from.clone())
+        .to(to)
+        .subject("You're off the 1201 Bistro waitlist");
+
+    if let Some(reply_to) = email_config.reply_to.clone() {
+        email_builder = email_builder.reply_to(reply_to);
+    }
+
+    let email = email_builder
+        .singlepart(SinglePart::html(build_waitlist_contact_email_body(
+            &email_config.waitlist_contact_template,
+            entry,
+            code,
+            expires_at,
+        )))
+        .map_err(|_| ApiError::internal("Unable to create the waitlist contact email"))?;
+
+    email_config
+        .mailer
+        .send(email)
+        .await
+        .map_err(|error| {
+            tracing::error!(?error, "SMTP send failed for waitlist contact email");
+            ApiError::internal("Waitlist entry updated, but the contact email could not be sent")
+        })?;
+
+    Ok(true)
 }
 
 /// Loads the plain-text email template that backs reservation confirmations.
@@ -151,6 +229,16 @@ fn load_cancellation_template() -> std::result::Result<String, ApiError> {
 
     fs::read_to_string(&template_path).map_err(|_| {
         ApiError::internal("SMTP_CANCELLATION_TEMPLATE_PATH could not be read for reservation emails")
+    })
+}
+
+/// Loads the HTML email template sent to waitlist members when they receive an access code.
+fn load_waitlist_contact_template() -> std::result::Result<String, ApiError> {
+    let template_path = env::var("SMTP_WAITLIST_CONTACT_TEMPLATE_PATH")
+        .unwrap_or_else(|_| DEFAULT_WAITLIST_CONTACT_TEMPLATE_PATH.to_string());
+
+    fs::read_to_string(&template_path).map_err(|_| {
+        ApiError::internal("SMTP_WAITLIST_CONTACT_TEMPLATE_PATH could not be read for waitlist emails")
     })
 }
 
@@ -194,6 +282,7 @@ pub(crate) fn load_email_config() -> std::result::Result<Option<EmailConfig>, Ap
         .map_err(|_| ApiError::internal("SMTP_PORT must be a valid port number"))?;
     let confirmation_template = load_confirmation_template()?;
     let cancellation_template = load_cancellation_template()?;
+    let waitlist_contact_template = load_waitlist_contact_template()?;
 
     let from = Mailbox::new(
         Some(from_name),
@@ -223,6 +312,7 @@ pub(crate) fn load_email_config() -> std::result::Result<Option<EmailConfig>, Ap
         reply_to,
         confirmation_template,
         cancellation_template,
+        waitlist_contact_template,
     }))
 }
 
@@ -244,14 +334,29 @@ mod tests {
     fn test_confirmation_body_substitutes_all_fields() {
         let template = "Hi {{name}}, your reservation on {{date}} at {{time}} is confirmed.";
         let body = build_confirmation_email_body(template, &test_reservation());
-        assert_eq!(body, "Hi Jane Doe, your reservation on 2026-12-25 at 7:00 PM is confirmed.");
+        assert_eq!(body, "Hi Jane Doe, your reservation on Friday December 25, 2026 at 7:00 PM is confirmed.");
     }
 
     #[test]
     fn test_cancellation_body_substitutes_all_fields() {
         let template = "Hi {{name}}, your reservation on {{date}} at {{time}} has been cancelled.";
         let body = build_cancellation_email_body(template, &test_reservation());
-        assert_eq!(body, "Hi Jane Doe, your reservation on 2026-12-25 at 7:00 PM has been cancelled.");
+        assert_eq!(body, "Hi Jane Doe, your reservation on Friday December 25, 2026 at 7:00 PM has been cancelled.");
+    }
+
+    #[test]
+    fn test_format_date_human() {
+        assert_eq!(format_date_human("2026-12-25"), "Friday December 25, 2026");
+    }
+
+    #[test]
+    fn test_format_date_human_single_digit_day() {
+        assert_eq!(format_date_human("2026-06-01"), "Monday June 1, 2026");
+    }
+
+    #[test]
+    fn test_format_date_human_invalid_falls_back() {
+        assert_eq!(format_date_human("not-a-date"), "not-a-date");
     }
 
     #[test]

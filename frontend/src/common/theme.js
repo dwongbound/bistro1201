@@ -105,5 +105,46 @@ export const appTheme = createTheme({
         },
       },
     },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: {
+          color: '#c4b6a3',
+          '&.Mui-error': {
+            color: '#c4b6a3',
+          },
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          color: '#f3eadc',
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'rgba(217, 195, 161, 0.28)',
+          },
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'rgba(217, 195, 161, 0.42)',
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#d9c3a1',
+          },
+          '&.Mui-error': {
+            color: '#f3eadc',
+          },
+          '&.Mui-error .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#ff4d3a',
+          },
+          '&.Mui-error:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#ff6a59',
+          },
+          '&.Mui-error.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#ff6a59',
+          },
+          '&.Mui-error .MuiOutlinedInput-input': {
+            color: '#f3eadc',
+          },
+        },
+      },
+    },
   },
 });
