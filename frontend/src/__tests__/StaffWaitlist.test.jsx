@@ -216,9 +216,9 @@ describe('StaffWaitlist', () => {
       await user.type(within(dialog).getByRole('textbox', { name: /add note/i }), 'VIP guest');
       await user.click(within(dialog).getByRole('button', { name: /save note/i }));
 
-      const detailsButton = await screen.findByRole('button', { name: /view details for jane doe/i });
-      await user.click(detailsButton);
-      expect(await screen.findByText('VIP guest')).toBeVisible();
+      await user.click(await screen.findByRole('button', { name: /edit note for jane doe/i }));
+      const updatedDialog = await screen.findByRole('dialog', { name: /staff note/i });
+      expect(within(updatedDialog).getByText('VIP guest')).toBeVisible();
     });
 
     it('shows existing note history separately from the add-note input', async () => {
