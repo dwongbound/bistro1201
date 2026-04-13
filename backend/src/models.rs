@@ -180,6 +180,72 @@ pub(crate) struct DeleteGalleryImageResponse {
     pub(crate) id: i64,
 }
 
+/// One waitlist entry as stored in the database.
+#[derive(Serialize, Deserialize, Clone, FromRow, ToSchema)]
+pub(crate) struct WaitlistEntry {
+    pub(crate) id: i64,
+    pub(crate) first_name: String,
+    pub(crate) last_name: String,
+    pub(crate) email: String,
+    pub(crate) phone: String,
+    pub(crate) notes: String,
+    pub(crate) staff_note: String,
+    pub(crate) sort_order: i64,
+    pub(crate) created_at: i64,
+    pub(crate) contacted_code: Option<String>,
+}
+
+/// Request body sent by a visitor joining the public waitlist.
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct CreateWaitlistEntryRequest {
+    pub(crate) first_name: String,
+    pub(crate) last_name: String,
+    pub(crate) email: String,
+    pub(crate) phone: String,
+    pub(crate) notes: Option<String>,
+}
+
+/// Request body for staff to update the private note on a waitlist entry.
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct UpdateWaitlistNoteRequest {
+    pub(crate) staff_note: String,
+}
+
+/// Optional request body for staff contacting a waitlist entry with a custom access code.
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct ContactWaitlistEntryRequest {
+    pub(crate) code: Option<String>,
+}
+
+/// Request body for staff to reorder waitlist entries.
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct ReorderWaitlistRequest {
+    pub(crate) order: Vec<i64>,
+}
+
+/// Query string for paginating the waitlist.
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct WaitlistPageParams {
+    pub(crate) offset: Option<i64>,
+    pub(crate) limit: Option<i64>,
+}
+
+/// Response returned after contacting a waitlist entry with a temporary access code.
+#[derive(Serialize, ToSchema)]
+pub(crate) struct ContactWaitlistEntryResponse {
+    pub(crate) entry: WaitlistEntry,
+    pub(crate) code: String,
+    pub(crate) expires_at: i64,
+    pub(crate) email_sent: bool,
+}
+
+/// Paginated waitlist response with entries and total count.
+#[derive(Serialize, ToSchema)]
+pub(crate) struct WaitlistPageResponse {
+    pub(crate) entries: Vec<WaitlistEntry>,
+    pub(crate) total: i64,
+}
+
 /// Stores one backend access-code record with an optional expiration timestamp.
 #[derive(Clone)]
 pub(crate) struct AccessCodeSeed {

@@ -1,5 +1,6 @@
 import { Button, Chip, Stack, TextField, Typography } from '@mui/material';
 import SurfaceCard from '../../common/SurfaceCard';
+import { useFormErrors } from '../../common/useFormErrors';
 import StyledDateInput from '../../common/StyledDateInput';
 import { formatHumanDate, formatHumanTime } from './reserve';
 
@@ -19,12 +20,22 @@ function GuestReservationCard({
   selectedDinnerTime,
   selectedDinnerTimes,
 }) {
+  const { errors, validate, clearError } = useFormErrors();
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (!validate({ name: form.name, email: form.email })) {
+      return;
+    }
+    onSubmit(event);
+  };
+
   return (
     <SurfaceCard contentSx={{ p: { xs: 2.5, sm: 3 } }}>
       <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
         Guest Reservation
       </Typography>
-      <Stack component="form" onSubmit={onSubmit} spacing={2.5}>
+      <Stack component="form" onSubmit={handleSubmit} spacing={2.5} noValidate>
         <StyledDateInput
           id="reservation-date"
           label="Date *"
@@ -87,8 +98,12 @@ function GuestReservationCard({
           type="text"
           name="name"
           value={form.name}
-          onChange={onInputChange}
-          required
+          onChange={(event) => {
+            clearError('name');
+            onInputChange(event);
+          }}
+          error={Boolean(errors.name)}
+          helperText={errors.name}
           fullWidth
         />
         <TextField
@@ -97,8 +112,12 @@ function GuestReservationCard({
           type="email"
           name="email"
           value={form.email}
-          onChange={onInputChange}
-          required
+          onChange={(event) => {
+            clearError('email');
+            onInputChange(event);
+          }}
+          error={Boolean(errors.email)}
+          helperText={errors.email}
           fullWidth
         />
         <Button

@@ -321,14 +321,24 @@ function StaffControlsCard({
             </Stack>
           </Box>
           <Divider sx={{ borderColor: 'rgba(217, 195, 161, 0.12)' }} />
-          <Button
-            component="a"
-            href="/staff/gallery"
-            variant="outlined"
-            fullWidth={isMobile}
-          >
-            Gallery Admin
-          </Button>
+          <Stack direction="row" spacing={1.5}>
+            <Button
+              component="a"
+              href="/staff/waitlist"
+              variant="outlined"
+              fullWidth
+            >
+              Waitlist Admin
+            </Button>
+            <Button
+              component="a"
+              href="/staff/gallery"
+              variant="outlined"
+              fullWidth
+            >
+              Gallery Admin
+            </Button>
+          </Stack>
         </Stack>
       ) : (
         <Stack component="form" onSubmit={onUnlockStaff} spacing={2}>

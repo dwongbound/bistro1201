@@ -38,6 +38,11 @@ import { CSS } from '@dnd-kit/utilities';
 import { useEffect, useRef, useState } from 'react';
 import { createApiFetch } from '../../common/apiClient';
 import { getApiUrl } from '../../common/appConfig';
+import {
+  clearStaffAccessCode,
+  readStaffAccessCode,
+  saveStaffAccessCode,
+} from '../../common/reserveAccessCookie';
 import PageIntro from '../../common/PageIntro';
 import SurfaceCard from '../../common/SurfaceCard';
 import { useFormErrors } from '../../common/useFormErrors';
@@ -52,23 +57,6 @@ import {
   updateGalleryImage,
   uploadGalleryFile,
 } from './galleryAdminApi';
-
-const GALLERY_STAFF_COOKIE = 'bistro_gallery_staff_code';
-const COOKIE_PATH = 'Path=/';
-const COOKIE_SAME_SITE = 'SameSite=Lax';
-
-function saveGalleryStaffCode(code) {
-  document.cookie = [`${GALLERY_STAFF_COOKIE}=${encodeURIComponent(code)}`, COOKIE_PATH, `Max-Age=${60 * 60 * 24 * 30}`, COOKIE_SAME_SITE].join('; ');
-}
-
-function readGalleryStaffCode() {
-  const entry = document.cookie.split('; ').find((c) => c.startsWith(`${GALLERY_STAFF_COOKIE}=`));
-  return entry ? decodeURIComponent(entry.slice(`${GALLERY_STAFF_COOKIE}=`.length)) : '';
-}
-
-function clearGalleryStaffCode() {
-  document.cookie = [`${GALLERY_STAFF_COOKIE}=`, COOKIE_PATH, 'Max-Age=0', 'Expires=Thu, 01 Jan 1970 00:00:00 GMT', COOKIE_SAME_SITE].join('; ');
-}
 
 const EVENT_TYPES = ['Bistro', 'Cafe'];
 
@@ -191,13 +179,13 @@ function StaffGallery() {
 
   const clearAuth = () => {
     setAuth({ token: '', role: '' });
-    clearGalleryStaffCode();
+    clearStaffAccessCode();
   };
 
   const apiFetch = createApiFetch({
     apiUrl,
     getToken: () => auth.token,
-    getServiceKey: () => readGalleryStaffCode(),
+    getServiceKey: () => readStaffAccessCode(),
     onUnauthorized: clearAuth,
   });
 
@@ -241,10 +229,10 @@ function StaffGallery() {
       if (!response.ok) throw new Error(payload.error || 'Invalid access code.');
       if (payload.role !== 'staff') throw new Error('This page requires a staff access code.');
       setAuth({ token: payload.token, role: payload.role });
-      saveGalleryStaffCode(code);
+      saveStaffAccessCode(code);
     } catch (error) {
       setAuthError(error.message);
-      clearGalleryStaffCode();
+      clearStaffAccessCode();
     } finally {
       setAuthBusy(false);
     }
@@ -252,7 +240,7 @@ function StaffGallery() {
 
   // Silent re-auth on mount from cookie
   useEffect(() => {
-    const saved = readGalleryStaffCode();
+    const saved = readStaffAccessCode();
     if (saved) tryLogin(saved);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

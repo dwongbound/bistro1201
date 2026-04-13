@@ -18,6 +18,7 @@ import ReserveAccessGate from './ReserveAccessGate';
 import ReserveCalendarCard from './ReserveCalendarCard';
 import StaffControlsCard from './StaffControlsCard';
 import useReserveCalendar from './useReserveCalendar';
+import WaitlistForm from './WaitlistForm';
 import { formatDateKey, formatHumanDate, formatHumanTime, sortAvailability, sortReservations } from './reserve';
 
 function sortAccessCodes(accessCodes) {
@@ -776,13 +777,16 @@ function Scheduling() {
 
   if (!auth.token) {
     return (
-      <ReserveAccessGate
-        accessCode={accessCode}
-        authBusy={authBusy}
-        authStatus={authStatus}
-        onAccessCodeChange={(event) => setAccessCode(event.target.value)}
-        onSubmit={handleGuestAccessSubmit}
-      />
+      <Box sx={{ display: 'grid', gap: 4 }}>
+        <WaitlistForm apiUrl={apiUrl} />
+        <ReserveAccessGate
+          accessCode={accessCode}
+          authBusy={authBusy}
+          authStatus={authStatus}
+          onAccessCodeChange={(event) => setAccessCode(event.target.value)}
+          onSubmit={handleGuestAccessSubmit}
+        />
+      </Box>
     );
   }
 

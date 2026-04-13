@@ -1,8 +1,9 @@
 use crate::models::{
     AccessCodeLookup, AccessCodeRecord, AccessCodeSeed, AvailabilityDate, CreateGalleryEventRequest,
-    CreateGalleryImageRequest, DeleteGalleryEventResponse, DeleteGalleryImageResponse, GalleryEventDetail,
-    GalleryEventSummary, GalleryImage, GalleryImageRecord, Reservation, UpdateGalleryEventRequest,
-    UpdateGalleryImageRequest, GUEST_ROLE, STAFF_ROLE,
+    CreateGalleryImageRequest, CreateWaitlistEntryRequest, DeleteGalleryEventResponse,
+    DeleteGalleryImageResponse, GalleryEventDetail, GalleryEventSummary, GalleryImage,
+    GalleryImageRecord, Reservation, UpdateGalleryEventRequest, UpdateGalleryImageRequest,
+    WaitlistEntry, GUEST_ROLE, STAFF_ROLE,
 };
 use chrono::DateTime;
 use sqlx::postgres::PgPoolOptions;
@@ -121,6 +122,22 @@ pub(crate) async fn ensure_schema(pool: &PgPool) -> Result<()> {
             alt_text TEXT NOT NULL,
             sort_order BIGINT NOT NULL DEFAULT 0,
             is_preview BOOLEAN NOT NULL DEFAULT FALSE
+        )",
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS waitlists (
+            id BIGSERIAL PRIMARY KEY,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            notes TEXT NOT NULL DEFAULT '',
+            staff_note TEXT NOT NULL DEFAULT '',
+            sort_order BIGINT NOT NULL DEFAULT 0,
+            created_at BIGINT NOT NULL,
+            contacted_code TEXT
         )",
     )
     .execute(pool)
@@ -650,6 +667,129 @@ pub(crate) async fn delete_gallery_image(
     Ok(deleted.map(|id| DeleteGalleryImageResponse { id }))
 }
 
+/// Loads a page of waitlist entries ordered by sort_order then created_at.
+pub(crate) async fn fetch_waitlist_page(pool: &PgPool, offset: i64, limit: i64) -> Result<Vec<WaitlistEntry>> {
+    sqlx::query_as::<_, WaitlistEntry>(
+        "SELECT id, first_name, last_name, email, phone, notes, staff_note,
+                sort_order, created_at, contacted_code
+         FROM waitlists
+         ORDER BY sort_order, created_at, id
+         LIMIT $1 OFFSET $2",
+    )
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await
+}
+
+/// Returns the total number of waitlist entries.
+pub(crate) async fn count_waitlist(pool: &PgPool) -> Result<i64> {
+    sqlx::query_scalar("SELECT COUNT(*) FROM waitlists")
+        .fetch_one(pool)
+        .await
+}
+
+/// Inserts a new waitlist entry and returns the saved record.
+pub(crate) async fn insert_waitlist_entry(
+    pool: &PgPool,
+    req: &CreateWaitlistEntryRequest,
+) -> Result<WaitlistEntry> {
+    let created_at = current_timestamp() as i64;
+    // Default sort_order to created_at so manual entries inserted later sort after existing ones.
+    let sort_order = created_at;
+    sqlx::query_as::<_, WaitlistEntry>(
+        "INSERT INTO waitlists (first_name, last_name, email, phone, notes, sort_order, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, first_name, last_name, email, phone, notes, staff_note,
+                   sort_order, created_at, contacted_code",
+    )
+    .bind(&req.first_name)
+    .bind(&req.last_name)
+    .bind(&req.email)
+    .bind(&req.phone)
+    .bind(req.notes.as_deref().unwrap_or(""))
+    .bind(sort_order)
+    .bind(created_at)
+    .fetch_one(pool)
+    .await
+}
+
+/// Fetches one waitlist entry by id.
+pub(crate) async fn fetch_waitlist_entry(pool: &PgPool, id: i64) -> Result<Option<WaitlistEntry>> {
+    sqlx::query_as::<_, WaitlistEntry>(
+        "SELECT id, first_name, last_name, email, phone, notes, staff_note,
+                sort_order, created_at, contacted_code
+         FROM waitlists
+         WHERE id = $1",
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+}
+
+/// Deletes one waitlist entry by id and returns the removed record.
+pub(crate) async fn delete_waitlist_entry(pool: &PgPool, id: i64) -> Result<Option<WaitlistEntry>> {
+    sqlx::query_as::<_, WaitlistEntry>(
+        "DELETE FROM waitlists WHERE id = $1
+         RETURNING id, first_name, last_name, email, phone, notes, staff_note,
+                   sort_order, created_at, contacted_code",
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+}
+
+/// Appends one formatted entry to the staff-note history and returns the updated record.
+pub(crate) async fn update_waitlist_note(
+    pool: &PgPool,
+    id: i64,
+    staff_note: &str,
+) -> Result<Option<WaitlistEntry>> {
+    sqlx::query_as::<_, WaitlistEntry>(
+        "UPDATE waitlists
+         SET staff_note = CASE
+             WHEN trim(staff_note) = '' THEN $2
+             ELSE staff_note || E'\n\n' || $2
+         END
+         WHERE id = $1
+         RETURNING id, first_name, last_name, email, phone, notes, staff_note,
+                   sort_order, created_at, contacted_code",
+    )
+    .bind(id)
+    .bind(staff_note)
+    .fetch_optional(pool)
+    .await
+}
+
+/// Records the guest code sent to a waitlist entry so the UI can show "contacted" status.
+pub(crate) async fn update_waitlist_contacted_code(
+    pool: &PgPool,
+    id: i64,
+    code: &str,
+) -> Result<Option<WaitlistEntry>> {
+    sqlx::query_as::<_, WaitlistEntry>(
+        "UPDATE waitlists SET contacted_code = $2 WHERE id = $1
+         RETURNING id, first_name, last_name, email, phone, notes, staff_note,
+                   sort_order, created_at, contacted_code",
+    )
+    .bind(id)
+    .bind(code)
+    .fetch_optional(pool)
+    .await
+}
+
+/// Applies a new sort_order to a batch of waitlist entries identified by id.
+pub(crate) async fn reorder_waitlist_entries(pool: &PgPool, order: &[i64]) -> Result<()> {
+    for (position, &id) in order.iter().enumerate() {
+        sqlx::query("UPDATE waitlists SET sort_order = $1 WHERE id = $2")
+            .bind(position as i64)
+            .bind(id)
+            .execute(pool)
+            .await?;
+    }
+    Ok(())
+}
+
 /// Generates a unique-looking session token from the current time and process counter.
 pub(crate) fn generate_session_token() -> String {
     let timestamp = current_timestamp();
@@ -735,7 +875,7 @@ mod tests {
             .expect("failed to initialize test database schema");
 
         sqlx::query(
-            "TRUNCATE TABLE reservations, available_dates, access_codes, api_sessions, gallery_images, gallery_events RESTART IDENTITY CASCADE",
+            "TRUNCATE TABLE reservations, available_dates, access_codes, api_sessions, gallery_images, gallery_events, waitlists RESTART IDENTITY CASCADE",
         )
             .execute(&pool)
             .await
@@ -758,7 +898,8 @@ mod tests {
                  'access_codes',
                  'api_sessions',
                  'gallery_events',
-                 'gallery_images'
+                 'gallery_images',
+                 'waitlists'
                )
              ORDER BY table_name",
         )
@@ -775,6 +916,7 @@ mod tests {
                 "gallery_events",
                 "gallery_images",
                 "reservations",
+                "waitlists",
             ]
         );
     }
