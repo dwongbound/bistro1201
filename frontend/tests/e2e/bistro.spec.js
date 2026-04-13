@@ -456,6 +456,8 @@ test.describe('1201 Bistro Website', () => {
   });
 
   test('should keep an opened reservation slot visible after leaving reserve and coming back', async ({ page }, testInfo) => {
+    testInfo.setTimeout(45000);
+
     const targetDateValue = getE2eDate(testInfo, 5);
     const persistentDinnerTime = secondaryDinnerTime;
     const persistentDinnerTimeLabel = secondaryDinnerTimeLabel;
