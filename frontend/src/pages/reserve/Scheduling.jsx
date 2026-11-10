@@ -796,8 +796,6 @@ function Scheduling() {
         eyebrow="Reservations"
         title="Reserve an Evening"
         description="This webpage is kept up to date with the latest open availabilities."
-        titleProps={{ sx: { maxWidth: 760 } }}
-        descriptionProps={{ sx: { maxWidth: 760 } }}
       />
 
       {authStatus.message ? (

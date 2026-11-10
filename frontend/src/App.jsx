@@ -1,24 +1,10 @@
-import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
-import {
-  AppBar,
-  Box,
-  Button,
-  CssBaseline,
-  Drawer,
-  IconButton,
-  List,
-  ListItemButton,
-  ListItemText,
-  Stack,
-  ThemeProvider,
-  Toolbar,
-  Typography,
-} from '@mui/material';
-import { useState } from 'react';
+import { ThemeProvider } from '@mui/material';
+import { useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import AppScrollShell from './common/AppScrollShell';
 import BrandWordmark from './common/BrandWordmark';
 import PageTransition from './common/PageTransition';
+import { CloseIcon, MenuIcon } from './common/icons';
 import { navItems } from './common/navigation';
 import { appTheme } from './common/theme';
 import Home from './pages/home/Home';
@@ -29,6 +15,9 @@ import GalleryEventDetail from './pages/gallery/GalleryEventDetail';
 import Scheduling from './pages/reserve/Scheduling';
 import StaffGallery from './pages/gallery/StaffGallery';
 import StaffWaitlist from './pages/reserve/StaffWaitlist';
+
+// Reserve gets its own pill button in the header, so the plain links leave it out.
+const headerLinks = navItems.filter((item) => item.to !== '/reserve');
 
 /**
  * Keeps route selection in the shell while delegating transition visuals to a shared component.
@@ -64,180 +53,155 @@ function AppRoutes() {
 }
 
 /**
+ * Returns the class list for a desktop header link, highlighting the active route.
+ */
+function headerLinkClass({ isActive }) {
+  const base = 'relative py-2 text-sm font-medium tracking-wide transition-colors after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:origin-left after:bg-sand after:transition-transform after:duration-300';
+  if (isActive) {
+    return `${base} text-sand-light after:scale-x-100`;
+  }
+  return `${base} text-cream/80 hover:text-cream after:scale-x-0 hover:after:scale-x-100`;
+}
+
+/**
+ * Full-screen phone menu. The rest of the page is made inert while it is open
+ * so screen readers and tests only see the menu links.
+ */
+function MobileMenu({ open, onClose }) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Navigation menu"
+      className="fixed inset-0 z-50 flex animate-fade-in flex-col bg-ink-950/95 backdrop-blur-xl md:hidden"
+    >
+      <div className="flex h-16 items-center justify-between px-5">
+        <NavLink to="/" onClick={onClose} className="text-lg text-sand-light">
+          <BrandWordmark />
+        </NavLink>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close navigation menu"
+          className="-mr-2 inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-medium text-cream"
+        >
+          Close
+          <CloseIcon className="size-[18px]" />
+        </button>
+      </div>
+      <nav aria-label="Primary" className="flex flex-1 flex-col justify-center gap-1 px-6 pb-24">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === '/'}
+            onClick={onClose}
+            className={({ isActive }) =>
+              `font-display py-3 text-4xl tracking-tight transition-colors ${isActive ? 'text-sand-light' : 'text-cream/70 hover:text-cream'}`
+            }
+          >
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+/**
  * Renders the top-level shell, including navigation and route switching.
  */
 function AppShell() {
+  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isHomeRoute = location.pathname === '/';
 
   /**
-   * Closes the mobile drawer after route changes or backdrop taps.
+   * Closes the phone menu after a link tap, Escape, or the Close button.
    */
   const closeMobileMenu = () => {
     setMobileMenuOpen(false);
   };
 
+  const headerRef = useRef(null);
+  const contentRef = useRef(null);
+
+  // React 18 does not pass `inert` through as a prop, so set it on the DOM directly.
+  // aria-hidden as well, for assistive tech and test tools that ignore inert.
+  useEffect(() => {
+    [headerRef.current, contentRef.current].forEach((node) => {
+      if (!node) return;
+      if (mobileMenuOpen) {
+        node.setAttribute('inert', '');
+        node.setAttribute('aria-hidden', 'true');
+      } else {
+        node.removeAttribute('inert');
+        node.removeAttribute('aria-hidden');
+      }
+    });
+  }, [mobileMenuOpen]);
+
   return (
-    <Router>
-      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <AppBar position="sticky" color="transparent" elevation={0} sx={{ backdropFilter: 'blur(14px)' }}>
-          <Toolbar sx={{ justifyContent: 'space-between', gap: 2, px: { xs: 2, md: 4 } }}>
-            <Typography
-              variant="h6"
-              component={NavLink}
-              to="/"
-              sx={{
-                color: 'primary.light',
-                fontSize: { xs: '1.15rem', sm: '1.3rem' },
-                textDecoration: 'none',
-              }}
-            >
-              <BrandWordmark />
-            </Typography>
-            <IconButton
-              color="inherit"
-              aria-label="Open navigation menu"
-              onClick={() => setMobileMenuOpen(true)}
-              edge="end"
-              sx={{ display: { xs: 'inline-flex', md: 'none' } }}
-            >
-              <MenuRoundedIcon />
-            </IconButton>
-            <Stack
-              direction="row"
-              spacing={0}
-              sx={{
-                display: { xs: 'none', md: 'flex' },
-                justifyContent: 'flex-end',
-                alignSelf: 'stretch',
-                minHeight: '100%',
-              }}
-            >
-              {navItems.map((item, index) => (
-                <Box
-                  key={item.to}
-                  sx={{
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'stretch',
-                    '&::before': index === 0 ? undefined : {
-                      content: '"|"',
-                      position: 'absolute',
-                      left: 0,
-                      top: '50%',
-                      transform: 'translateY(-52%)',
-                      color: 'rgba(217, 195, 161, 0.35)',
-                      fontSize: '0.95rem',
-                      lineHeight: 1,
-                      pointerEvents: 'none',
-                    },
-                  }}
-                >
-                  <Button
-                    component={NavLink}
-                    to={item.to}
-                    end={item.to === '/'}
-                    disableRipple
-                    sx={{
-                      color: 'text.primary',
-                      borderRadius: 0,
-                      px: 2.75,
-                      minWidth: 0,
-                      minHeight: '100%',
-                      alignSelf: 'stretch',
-                      border: 'none',
-                      textDecoration: 'none',
-                      fontFamily: '"Montserrat", sans-serif',
-                      fontWeight: 700,
-                      '&:hover': {
-                        backgroundColor: 'transparent',
-                        textDecoration: 'underline',
-                        textDecorationColor: 'rgba(217, 195, 161, 0.55)',
-                        textDecorationThickness: '1px',
-                        textUnderlineOffset: '0.35em',
-                      },
-                      '&:active': {
-                        backgroundColor: 'transparent',
-                      },
-                      '&:focus-visible': {
-                        backgroundColor: 'transparent',
-                      },
-                      '&.active': {
-                        color: 'primary.light',
-                        textDecoration: 'underline',
-                        textDecorationColor: 'rgba(217, 195, 161, 0.9)',
-                        textDecorationThickness: '1px',
-                        textUnderlineOffset: '0.35em',
-                      },
-                    }}
-                  >
-                    {item.label}
-                  </Button>
-                </Box>
-              ))}
-            </Stack>
-          </Toolbar>
-        </AppBar>
-        <Drawer
-          anchor="right"
-          open={mobileMenuOpen}
-          onClose={closeMobileMenu}
-          slotProps={{
-            paper: {
-              sx: {
-                width: 280,
-                px: 1,
-                py: 2,
-                bgcolor: 'background.paper',
-                backgroundImage: 'linear-gradient(180deg, rgba(34, 28, 24, 0.98), rgba(19, 16, 13, 0.98))',
-              },
-            },
-          }}
-        >
-          <Typography
-            component={NavLink}
-            to="/"
-            onClick={closeMobileMenu}
-            sx={{ px: 2, pb: 1.5, color: 'primary.light', textDecoration: 'none', display: 'block' }}
-          >
+    <div className="flex h-screen flex-col overflow-hidden">
+      <header
+        ref={headerRef}
+        className="relative z-30 border-b border-line bg-ink-950/70 backdrop-blur-md"
+      >
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-5 sm:px-8">
+          <NavLink to="/" aria-label="1201 Bistro home" className="text-lg text-sand-light sm:text-xl">
             <BrandWordmark />
-          </Typography>
-          <List sx={{ display: 'grid', gap: 1 }}>
-            {navItems.map((item) => (
-              <ListItemButton
-                key={item.to}
-                component={NavLink}
-                to={item.to}
-                end={item.to === '/'}
-                onClick={closeMobileMenu}
-                sx={{
-                  borderRadius: 3,
-                  '&.active': {
-                    bgcolor: 'rgba(176, 122, 68, 0.2)',
-                    color: 'primary.light',
-                  },
-                }}
-              >
-                <ListItemText primary={item.label} primaryTypographyProps={{ fontFamily: '"Montserrat", sans-serif', fontWeight: 600 }} />
-              </ListItemButton>
+          </NavLink>
+          <nav aria-label="Primary" className="hidden items-center gap-8 md:flex">
+            {headerLinks.map((item) => (
+              <NavLink key={item.to} to={item.to} end={item.to === '/'} className={headerLinkClass}>
+                {item.label}
+              </NavLink>
             ))}
-          </List>
-        </Drawer>
-        <AppScrollShell>
+            <NavLink to="/reserve" className="btn btn-primary min-h-10 px-5">
+              Reserve
+            </NavLink>
+          </nav>
+          <button
+            type="button"
+            aria-label="Open navigation menu"
+            onClick={() => setMobileMenuOpen(true)}
+            className="-mr-2 grid size-11 place-items-center rounded-full text-cream md:hidden"
+          >
+            <MenuIcon className="size-6" />
+          </button>
+        </div>
+      </header>
+      <MobileMenu open={mobileMenuOpen} onClose={closeMobileMenu} />
+      <div ref={contentRef} className="flex min-h-0 flex-1 flex-col">
+        <AppScrollShell fullBleed={isHomeRoute}>
           <AppRoutes />
         </AppScrollShell>
-      </Box>
-    </Router>
+      </div>
+    </div>
   );
 }
 
 /**
- * Wraps the routed application in the global MUI providers.
+ * Wraps the routed application. The MUI theme stays for the reserve and staff
+ * pages until they move to Tailwind too.
  */
 function App() {
   return (
     <ThemeProvider theme={appTheme}>
-      <CssBaseline />
-      <AppShell />
+      <Router>
+        <AppShell />
+      </Router>
     </ThemeProvider>
   );
 }

@@ -1,9 +1,9 @@
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
-import { Alert, Box, Button, Chip, CircularProgress, Stack, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { Link as RouterLink, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
+import Notice from '../../common/Notice';
 import PageIntro from '../../common/PageIntro';
-import SurfaceCard from '../../common/SurfaceCard';
+import Spinner from '../../common/Spinner';
+import { ArrowLeftIcon } from '../../common/icons';
 import { fetchGalleryEvent } from './galleryApi';
 
 /**
@@ -54,103 +54,66 @@ function GalleryEventDetail() {
     };
   }, [eventSlug]);
 
+  const backLink = (
+    <Link to="/gallery" className="inline-flex min-h-11 w-fit items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-cream">
+      <ArrowLeftIcon className="size-4" />
+      Back to Gallery
+    </Link>
+  );
+
   if (loadingEvent) {
     return (
-      <Box sx={{ display: 'grid', gap: 3 }}>
-        <PageIntro
-          eyebrow="Gallery"
-          title="Loading Event Gallery"
-          description="Pulling the latest event photos from the backend."
-        />
-        <SurfaceCard>
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <CircularProgress size={20} color="secondary" />
-            <Typography color="text.secondary">Loading event gallery...</Typography>
-          </Stack>
-        </SurfaceCard>
-      </Box>
+      <div className="grid gap-10">
+        <PageIntro eyebrow="Gallery" title="Loading Event Gallery" description="Pulling the latest event photos." />
+        <Spinner label="Loading event gallery..." />
+      </div>
     );
   }
 
   if (!event) {
     return (
-      <Box sx={{ display: 'grid', gap: 3 }}>
+      <div className="grid gap-8">
+        {backLink}
         <PageIntro
           eyebrow="Gallery"
           title="Event Not Found"
           description={eventError || 'That event gallery is not available right now.'}
         />
-        <Alert severity="warning">Try returning to the Gallery index to choose another event.</Alert>
-        <Button
-          component={RouterLink}
-          to="/gallery"
-          variant="outlined"
-          startIcon={<ArrowBackRoundedIcon />}
-          sx={{ width: 'fit-content' }}
-        >
-          Back to Gallery
-        </Button>
-      </Box>
+        <Notice tone="warning">Try returning to the Gallery index to choose another event.</Notice>
+      </div>
     );
   }
 
   return (
-    <Box sx={{ display: 'grid', gap: 3 }}>
-      <PageIntro
-        eyebrow="Gallery"
-        title={event.title}
-        description={event.summary}
-        descriptionProps={{ sx: { maxWidth: 760 } }}
-      />
-      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-        <Chip label={event.eventType} color="secondary" sx={{ width: 'fit-content', fontWeight: 700 }} />
-        <Chip label={event.dateLabel} variant="outlined" sx={{ width: 'fit-content' }} />
-      </Stack>
-      <Button
-        component={RouterLink}
-        to="/gallery"
-        variant="outlined"
-        startIcon={<ArrowBackRoundedIcon />}
-        sx={{ width: 'fit-content' }}
-      >
-        Back to Gallery
-      </Button>
+    <div className="grid gap-10 md:gap-14">
+      <div className="grid gap-6">
+        {backLink}
+        <PageIntro eyebrow={event.eventType} title={event.title} description={event.summary} />
+        <div className="flex flex-wrap gap-2">
+          <span className="tag tag-accent">{event.eventType}</span>
+          <span className="tag">{event.dateLabel}</span>
+          <span className="tag">{event.galleryImages.length} photos</span>
+        </div>
+      </div>
       {event.galleryImages.length === 0 ? (
-        <Alert severity="info">No gallery images have been added to this event yet.</Alert>
+        <Notice>No gallery images have been added to this event yet.</Notice>
       ) : (
-        <Box
-          sx={{
-            columnCount: { xs: 1, sm: 2, md: 3 },
-            columnGap: '12px',
-          }}
-        >
+        <div className="columns-1 gap-4 sm:columns-2 lg:columns-3">
           {event.galleryImages.map((image) => (
-            <Box
-              key={`${image.src}-${image.alt}`}
-              sx={{
-                breakInside: 'avoid',
-                mb: '12px',
-                display: 'block',
-              }}
-            >
-              <Box
-                component="img"
+            <figure key={`${image.src}-${image.alt}`} className="mb-4 break-inside-avoid overflow-hidden rounded-xl bg-ink-800">
+              <img
                 src={image.src}
                 alt={image.alt}
                 loading="lazy"
+                // Fade each photo in as it arrives instead of popping in.
                 onLoad={(e) => { e.currentTarget.style.opacity = '1'; }}
-                sx={{
-                  width: '100%',
-                  display: 'block',
-                  opacity: 0,
-                  transition: 'opacity 1s ease',
-                }}
+                className="block w-full opacity-0 transition-opacity duration-700"
               />
-            </Box>
+            </figure>
           ))}
-        </Box>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }
 

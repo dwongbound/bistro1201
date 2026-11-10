@@ -9,13 +9,16 @@ reservation flow, and staff tools.
 
 - React
 - Vite
-- Material UI
+- Tailwind CSS 4 (via PostCSS; design tokens in `src/index.css`)
+- Material UI, only on the reserve and staff pages until they move to Tailwind
 - Jest + React Testing Library
 - Playwright for end-to-end coverage
 
 ## Key Files
 
 - `src/App.jsx`
+- `src/index.css` (Tailwind theme: colors, fonts, shared `btn`/`tag`/`eyebrow` classes)
+- `src/common/theme.js` (MUI theme, kept in step with the Tailwind tokens)
 - `src/common/`
 - `src/pages/`
 - `vite.config.js`
