@@ -1,8 +1,7 @@
-import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
-import { Box, Container, Fade, Fab } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import AppFooter from './AppFooter';
+import { ChevronUpIcon } from './icons';
 
 /**
  * Keeps route changes inside the app-level scroller so page transitions do not depend on the browser viewport.
@@ -20,87 +19,42 @@ function ScrollReset({ scrollContainerRef, resetScrollTopButton }) {
 
 /**
  * Provides one shared in-page scroll surface plus a floating return-to-top action.
+ * `fullBleed` drops the page padding so the home hero can run edge to edge.
  */
-function AppScrollShell({ children }) {
+function AppScrollShell({ children, fullBleed = false }) {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const scrollContainerRef = useRef(null);
 
+  let contentClass = 'mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 py-10 sm:px-8 md:py-16';
+  if (fullBleed) {
+    contentClass = 'flex w-full flex-1 flex-col';
+  }
+
   return (
-    <Box
-      sx={{
-        flex: 1,
-        minHeight: 0,
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <div className="relative flex min-h-0 flex-1 flex-col">
       <ScrollReset scrollContainerRef={scrollContainerRef} resetScrollTopButton={setShowScrollTop} />
-      <Box
+      <div
         ref={scrollContainerRef}
         onScroll={(event) => {
           setShowScrollTop(event.currentTarget.scrollTop > 240);
         }}
-        sx={{
-          flex: 1,
-          height: 0,
-          minHeight: 0,
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          scrollbarGutter: 'stable',
-          WebkitOverflowScrolling: 'touch',
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(217, 195, 161, 0.42) rgba(255, 255, 255, 0.04)',
-          '&::-webkit-scrollbar': {
-            width: 10,
-          },
-          '&::-webkit-scrollbar-track': {
-            backgroundColor: 'rgba(255, 255, 255, 0.04)',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            backgroundColor: 'rgba(217, 195, 161, 0.42)',
-            borderRadius: 999,
-            border: '2px solid rgba(18, 15, 13, 0.9)',
-          },
-          '&::-webkit-scrollbar-thumb:hover': {
-            backgroundColor: 'rgba(234, 216, 188, 0.58)',
-          },
-        }}
+        className="warm-scrollbar flex h-0 min-h-0 w-full flex-1 flex-col overflow-x-hidden overflow-y-auto [scrollbar-gutter:stable]"
       >
-        <Container
-          maxWidth="lg"
-          sx={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            py: { xs: 2.5, sm: 3, md: 5 },
-            px: { xs: 2, sm: 3 },
-            width: '100%',
-          }}
-        >
-          {children}
-        </Container>
+        <main className={contentClass}>{children}</main>
         <AppFooter />
-      </Box>
-      <Fade in={showScrollTop}>
-        <Fab
-          color="secondary"
-          aria-label="Back to top"
-          onClick={() => scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-          sx={{
-            position: 'fixed',
-            right: { xs: 18, sm: 26 },
-            bottom: { xs: 22, sm: 30 },
-            zIndex: 1200,
-          }}
-        >
-          <KeyboardArrowUpRoundedIcon />
-        </Fab>
-      </Fade>
-    </Box>
+      </div>
+      <button
+        type="button"
+        aria-label="Back to top"
+        tabIndex={showScrollTop ? 0 : -1}
+        onClick={() => scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+        className={`fixed right-5 bottom-6 z-40 grid size-12 place-items-center rounded-full border border-line-strong bg-ink-800/90 text-sand-light shadow-lg shadow-black/40 backdrop-blur transition-all duration-300 hover:bg-ink-700 sm:right-8 sm:bottom-8 ${
+          showScrollTop ? 'opacity-100' : 'pointer-events-none translate-y-2 opacity-0'
+        }`}
+      >
+        <ChevronUpIcon />
+      </button>
+    </div>
   );
 }
 

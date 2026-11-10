@@ -1,21 +1,33 @@
-import EastRoundedIcon from '@mui/icons-material/EastRounded';
-import { Box, Button, Stack, Typography } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import BrandWordmark from '../../common/BrandWordmark';
+import { ArrowRightIcon } from '../../common/icons';
 import { fetchGalleryEvent } from '../gallery/galleryApi';
 
 const CYCLE_INTERVAL_MS = 5000;
 const TRANSITION_MS = 1500;
 const FADE_IN_DELAY_MS = 100;
 
+// What a guest can expect, shown under the hero.
+const highlights = [
+  {
+    title: 'Fresh ingredients',
+    copy: 'Menus shift with the season so the kitchen can spotlight produce, seafood, and meats at their best.',
+  },
+  {
+    title: 'Warm hospitality',
+    copy: 'We want reservations, arrivals, and service to feel calm, easy, and personal from start to finish.',
+  },
+  {
+    title: 'Evening atmosphere',
+    copy: 'Soft lighting, crisp pours, and a room designed for date nights, celebrations, and unhurried dinners.',
+  },
+];
+
 /**
- * Shows the landing-page hero over a full-screen crossfading photo slideshow.
+ * Shows the landing-page hero over a crossfading photo slideshow, then a short
+ * "what to expect" section and a reserve prompt.
  * Photos are managed via the Home Slideshow section in the Gallery Admin.
- *
- * The slideshow uses zIndex: 1 (not -1) so it sits above the body/html background
- * paint. Hero content uses zIndex: 2 to stay on top of the slideshow.
- * The Home component only mounts on the home route, so other pages are unaffected.
  */
 function Home() {
   const [slides, setSlides] = useState([]);
@@ -93,94 +105,86 @@ function Home() {
 
   return (
     <>
-      {/* Fixed full-screen slideshow. zIndex:1 places it above the body/html background. */}
-      <Box
-        sx={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 1,
-          backgroundColor: '#120f0d',
-          overflow: 'hidden',
-        }}
-      >
-        {slides.map((slide, i) => (
-          <Box
-            key={slide.src}
-            data-testid={`home-slide-${i}`}
-            data-slide-src={slide.src}
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              backgroundImage: `url(${slide.src})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              opacity: visible && loadedSlides.has(slide.src) && i === currentIndex ? 1 : 0,
-              transition: `opacity ${TRANSITION_MS}ms ease`,
-            }}
-          />
-        ))}
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(to bottom, rgba(18,15,13,0.82) 0%, rgba(18,15,13,0.64) 50%, rgba(18,15,13,0.9) 100%)',
-            opacity: visible ? 1 : 0,
-            transition: `opacity ${TRANSITION_MS}ms ease`,
-          }}
-        />
-      </Box>
+      <section className="relative isolate flex min-h-[calc(100svh-4rem)] items-end overflow-hidden">
+        {/* Crossfading slideshow behind the hero copy. */}
+        <div className="absolute inset-0 -z-10 bg-ink-950" aria-hidden="true">
+          {slides.map((slide, i) => (
+            <div
+              key={slide.src}
+              data-testid={`home-slide-${i}`}
+              data-slide-src={slide.src}
+              className="absolute inset-0 scale-105 bg-cover bg-center"
+              style={{
+                backgroundImage: `url(${slide.src})`,
+                opacity: visible && loadedSlides.has(slide.src) && i === currentIndex ? 1 : 0,
+                transition: `opacity ${TRANSITION_MS}ms ease`,
+              }}
+            />
+          ))}
+          {/* Darkens the bottom-left corner so the copy always reads, whatever the photo. */}
+          <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/60 to-ink-950/20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-ink-950/70 via-transparent to-transparent" />
+        </div>
 
-      {/* Hero content. zIndex:2 keeps it above the slideshow. */}
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 3,
-          py: { xs: 4, md: 8 },
-          minHeight: { md: '70vh' },
-          alignContent: 'center',
-          position: 'relative',
-          zIndex: 2,
-          opacity: visible ? 1 : 0,
-          transform: visible ? 'none' : 'translateY(12px)',
-          transition: `opacity ${TRANSITION_MS}ms ease, transform ${TRANSITION_MS}ms ease`,
-        }}
-      >
-        <Box
-          sx={{
-            width: '50%',
-            height: '1px',
-            backgroundColor: 'rgba(217, 195, 161, 0.55)',
-            display: 'block',
-            flexShrink: 0,
-          }}
-        />
-        <Typography variant="h4">
-          Welcome to
-        </Typography>
-        <Typography
-          component="h1"
-          variant="h2"
-          sx={{
-            maxWidth: 760,
-            fontWeight: 800,
-            letterSpacing: '-0.04em',
+        <div
+          className="mx-auto grid w-full max-w-6xl gap-6 px-5 pt-24 pb-14 sm:px-8 md:pb-24"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? 'none' : 'translateY(12px)',
+            transition: `opacity ${TRANSITION_MS}ms ease, transform ${TRANSITION_MS}ms ease`,
           }}
         >
-          <BrandWordmark sx={{ fontSize: '1em', letterSpacing: '0.05em' }} cycleSuffix/>
-        </Typography>
-        <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 640, lineHeight: 1.7 }}>
-          An intimate supper club experience with refined plates, thoughtful pours, and an easy way
-          to reserve your next evening.
-        </Typography>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <Button component={RouterLink} to="/reserve" variant="contained" size="large" endIcon={<EastRoundedIcon />}>
-            Reserve
-          </Button>
-          <Button component={RouterLink} to="/gallery" variant="outlined" size="large">
-            View Gallery
-          </Button>
-        </Stack>
-      </Box>
+          <h1 className="grid gap-4">
+            <span className="eyebrow">Welcome to</span>
+            <span className="text-5xl text-cream sm:text-7xl md:text-8xl">
+              <BrandWordmark className="tracking-[0.04em]" cycleSuffix />
+            </span>
+          </h1>
+          <p className="max-w-xl text-lg leading-relaxed text-cream/80">
+            An intimate supper club experience with refined plates, thoughtful pours, and an easy way
+            to reserve your next evening.
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link to="/reserve" className="btn btn-primary">
+              Reserve
+              <ArrowRightIcon className="size-4" />
+            </Link>
+            <Link to="/gallery" className="btn btn-ghost backdrop-blur-sm">
+              View Gallery
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 md:py-28">
+        <div className="grid gap-12 md:grid-cols-[1fr_2fr] md:gap-16">
+          <div className="grid content-start gap-4">
+            <p className="eyebrow">The evening</p>
+            <h2 className="font-display text-3xl leading-tight tracking-tight sm:text-4xl">
+              Small room, seasonal plates, no rush.
+            </h2>
+          </div>
+          <ol className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
+            {highlights.map((item, index) => (
+              <li key={item.title} className="grid content-start gap-3 bg-ink-950 p-6">
+                <span className="font-display text-sm text-brass-bright">0{index + 1}</span>
+                <h3 className="text-base font-semibold text-cream">{item.title}</h3>
+                <p className="text-sm leading-relaxed text-muted">{item.copy}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div className="mt-16 flex flex-col items-start justify-between gap-6 rounded-2xl border border-line bg-gradient-to-br from-ink-800 to-ink-900 p-8 sm:flex-row sm:items-center md:p-10">
+          <div className="grid gap-2">
+            <h2 className="font-display text-2xl tracking-tight sm:text-3xl">Save a seat at the table</h2>
+            <p className="text-muted">Openings are posted as soon as the next menu is set.</p>
+          </div>
+          <Link to="/reserve" className="btn btn-primary shrink-0">
+            See availability
+            <ArrowRightIcon className="size-4" />
+          </Link>
+        </div>
+      </section>
     </>
   );
 }

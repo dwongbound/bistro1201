@@ -1,13 +1,13 @@
-import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
-import { Alert, Box, Button, Chip, Grid, Skeleton, Stack, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import FadeInImage from '../../common/FadeInImage';
+import Notice from '../../common/Notice';
 import PageIntro from '../../common/PageIntro';
-import SurfaceCard from '../../common/SurfaceCard';
+import Spinner from '../../common/Spinner';
+import { ArrowRightIcon } from '../../common/icons';
 import { fetchGalleryEvents } from './galleryApi';
 
-const galleryLoadingPlaceholders = Array.from({ length: 3 }, (_, index) => ({
+const galleryLoadingPlaceholders = Array.from({ length: 2 }, (_, index) => ({
   id: `gallery-loading-${index}`,
 }));
 
@@ -51,155 +51,83 @@ function Gallery() {
   }, []);
 
   return (
-    <Box sx={{ display: 'grid', gap: 3 }}>
+    <div className="grid gap-12 md:gap-16">
       <PageIntro
-        eyebrow="Photos"
+        eyebrow="Gallery"
         title="Collections"
         description="Browse past evenings, preview a few moments from each event, and open the full photo set for a closer look."
-        descriptionProps={{ sx: { maxWidth: 760 } }}
       />
-      {galleryError ? <Alert severity="error">{galleryError}</Alert> : null}
+      {galleryError ? <Notice tone="error">{galleryError}</Notice> : null}
       {!loadingGallery && !galleryError && galleryEvents.length === 0 ? (
-        <Alert severity="info">No gallery events have been published yet. Add event metadata in Postgres when you are ready.</Alert>
+        <Notice>No gallery events have been published yet. Add event metadata in Postgres when you are ready.</Notice>
       ) : null}
       {loadingGallery ? (
-        <Grid container spacing={3}>
+        <div className="grid gap-12" aria-busy="true">
+          <Spinner label="Loading gallery..." />
           {galleryLoadingPlaceholders.map((placeholder) => (
-            <Grid key={placeholder.id} size={{ xs: 12 }}>
-              <SurfaceCard cardSx={{ overflow: 'hidden' }} contentSx={{ p: 0 }}>
-                <Grid container>
-                  <Grid size={{ xs: 12, md: 5 }}>
-                    <Skeleton
-                      variant="rectangular"
-                      animation="wave"
-                      sx={{
-                        minHeight: 320,
-                        height: '100%',
-                        bgcolor: 'rgba(255, 255, 255, 0.08)',
-                        transform: 'none',
-                      }}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 7 }}>
-                    <Box sx={{ p: { xs: 2.5, sm: 3 } }}>
-                      <Stack spacing={2.5}>
-                        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                          <Skeleton
-                            variant="rounded"
-                            animation="wave"
-                            sx={{ width: 80, height: 32, borderRadius: 999, bgcolor: 'rgba(255, 255, 255, 0.08)' }}
-                          />
-                          <Skeleton
-                            variant="rounded"
-                            animation="wave"
-                            sx={{ width: 116, height: 32, borderRadius: 999, bgcolor: 'rgba(255, 255, 255, 0.06)' }}
-                          />
-                        </Stack>
-                        <Box>
-                          <Skeleton
-                            variant="text"
-                            animation="wave"
-                            sx={{ fontSize: '2.2rem', width: '62%', bgcolor: 'rgba(255, 255, 255, 0.08)' }}
-                          />
-                          <Skeleton
-                            variant="text"
-                            animation="wave"
-                            sx={{ fontSize: '1rem', width: '96%', bgcolor: 'rgba(255, 255, 255, 0.05)' }}
-                          />
-                          <Skeleton
-                            variant="text"
-                            animation="wave"
-                            sx={{ fontSize: '1rem', width: '88%', bgcolor: 'rgba(255, 255, 255, 0.05)' }}
-                          />
-                          <Skeleton
-                            variant="text"
-                            animation="wave"
-                            sx={{ fontSize: '1rem', width: '72%', bgcolor: 'rgba(255, 255, 255, 0.05)' }}
-                          />
-                        </Box>
-                        <Grid container spacing={2}>
-                          {Array.from({ length: 2 }, (_, imageIndex) => (
-                            <Grid key={`${placeholder.id}-preview-${imageIndex}`} size={{ xs: 12, sm: 6 }}>
-                              <SurfaceCard cardSx={{ overflow: 'hidden' }} contentSx={{ p: 0 }}>
-                                <Skeleton
-                                  variant="rectangular"
-                                  animation="wave"
-                                  sx={{ height: 180, bgcolor: 'rgba(255, 255, 255, 0.07)', transform: 'none' }}
-                                />
-                              </SurfaceCard>
-                            </Grid>
-                          ))}
-                        </Grid>
-                        <Skeleton
-                          variant="rounded"
-                          animation="wave"
-                          sx={{ width: 172, height: 40, borderRadius: 999, bgcolor: 'rgba(255, 255, 255, 0.08)' }}
-                        />
-                      </Stack>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </SurfaceCard>
-            </Grid>
+            <div key={placeholder.id} className="grid animate-pulse gap-6 md:grid-cols-[1.4fr_1fr] md:gap-10" aria-hidden="true">
+              <div className="aspect-[4/3] rounded-2xl bg-white/[0.05]" />
+              <div className="grid content-center gap-4">
+                <div className="h-6 w-40 rounded-full bg-white/[0.06]" />
+                <div className="h-10 w-3/4 rounded-lg bg-white/[0.07]" />
+                <div className="h-4 w-full rounded bg-white/[0.04]" />
+                <div className="h-4 w-5/6 rounded bg-white/[0.04]" />
+              </div>
+            </div>
           ))}
-        </Grid>
+        </div>
       ) : null}
       {!loadingGallery && !galleryError ? (
-        <Grid container spacing={3}>
-          {galleryEvents.map((event) => (
-            <Grid key={event.slug} size={{ xs: 12 }}>
-              <SurfaceCard cardSx={{ overflow: 'hidden' }} contentSx={{ p: 0, '&:last-child': { pb: 0 } }}>
-                <Grid container>
-                  <Grid size={{ xs: 12, md: 6 }} sx={{ position: 'relative', aspectRatio: '4/3' }}>
-                    <FadeInImage
-                      src={event.coverImage}
-                      alt={event.title}
-                      sx={{ position: 'absolute', inset: 0, aspectRatio: 'unset' }}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <Box sx={{ p: { xs: 2.5, sm: 3 } }}>
-                      <Stack spacing={2.5}>
-                        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                          <Chip label={event.eventType} color="secondary" sx={{ width: 'fit-content', fontWeight: 700 }} />
-                          <Chip label={event.dateLabel} variant="outlined" sx={{ width: 'fit-content' }} />
-                        </Stack>
-                        <Box>
-                          <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-                            {event.title}
-                          </Typography>
-                          <Typography color="text.secondary" sx={{ maxWidth: 620, lineHeight: 1.8 }}>
-                            {event.summary}
-                          </Typography>
-                        </Box>
-                        <Grid container spacing={2}>
-                          {event.previewImages.map((image) => (
-                            <Grid key={`${event.slug}-${image.src}`} size={{ xs: 12, sm: 6 }}>
-                              <SurfaceCard cardSx={{ overflow: 'hidden' }} contentSx={{ p: 0 }}>
-                                <FadeInImage src={image.src} alt={image.alt} sx={{ aspectRatio: '4/3' }} />
-                              </SurfaceCard>
-                            </Grid>
-                          ))}
-                        </Grid>
-                        <Button
-                          component={RouterLink}
-                          to={`/gallery/${event.slug}`}
-                          variant="outlined"
-                          endIcon={<ArrowForwardRoundedIcon />}
-                          sx={{ width: 'fit-content' }}
-                        >
-                          View Event Gallery
-                        </Button>
-                      </Stack>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </SurfaceCard>
-            </Grid>
-          ))}
-        </Grid>
+        <ul className="grid gap-16 md:gap-24">
+          {galleryEvents.map((event, index) => {
+            const eventHref = `/gallery/${event.slug}`;
+            // Alternate the photo side on wide screens so the page has some rhythm.
+            const flip = index % 2 === 1;
+            return (
+              <li key={event.slug} className="group grid items-center gap-6 md:grid-cols-[1.4fr_1fr] md:gap-12">
+                <Link
+                  to={eventHref}
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className={`block overflow-hidden rounded-2xl ${flip ? 'md:order-2' : ''}`}
+                >
+                  <FadeInImage
+                    src={event.coverImage}
+                    alt={event.title}
+                    className="aspect-[4/3] w-full"
+                    imgClassName="transition-transform duration-[1200ms] ease-out group-hover:scale-[1.03]"
+                  />
+                </Link>
+                <div className="grid content-center gap-5">
+                  <div className="flex flex-wrap gap-2">
+                    <span className="tag tag-accent">{event.eventType}</span>
+                    <span className="tag">{event.dateLabel}</span>
+                  </div>
+                  <h2 className="font-display text-3xl leading-tight tracking-tight sm:text-4xl">{event.title}</h2>
+                  <p className="leading-relaxed text-muted">{event.summary}</p>
+                  {event.previewImages.length ? (
+                    <div className="grid grid-cols-3 gap-3">
+                      {event.previewImages.slice(0, 3).map((image) => (
+                        <FadeInImage
+                          key={`${event.slug}-${image.src}`}
+                          src={image.src}
+                          alt={image.alt}
+                          className="aspect-square w-full rounded-lg"
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                  <Link to={eventHref} className="btn btn-ghost w-fit">
+                    View Event Gallery
+                    <ArrowRightIcon className="size-4" />
+                  </Link>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       ) : null}
-    </Box>
+    </div>
   );
 }
 
