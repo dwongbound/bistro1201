@@ -30,7 +30,7 @@ use crate::state::AppState;
     )
 )]
 pub(crate) async fn root() -> &'static str {
-    "Hello from 1201 Bistro Backend"
+    "Hello from 1201 Backend"
 }
 
 /// Provides a dedicated health-check endpoint for load balancers and uptime monitors.

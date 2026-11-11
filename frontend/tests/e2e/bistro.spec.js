@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { DEFAULT_GUEST_ACCESS_CODE, DEFAULT_STAFF_ACCESS_CODE } from '../../src/test/accessCodeFixtures';
 import { formatDateKey, formatHumanDate } from '../../src/pages/reserve/reserve';
 
-test.describe('1201 Bistro Website', () => {
+test.describe('1201 Website', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
   const primaryDinnerTime = '19:00';
   const secondaryDinnerTime = '20:45';
@@ -122,7 +122,7 @@ test.describe('1201 Bistro Website', () => {
 
   test('should load homepage', async ({ page }) => {
     await page.goto('/');
-    await expect(page).toHaveTitle(/1201 Bistro/);
+    await expect(page).toHaveTitle(/1201/);
     const heroHeading = page.getByRole('heading', { name: /Welcome to/i });
     await expect(heroHeading).toBeVisible();
     await expect(page.getByRole('heading', { name: /12\s*0\s*1 Bistro/i })).toBeVisible();
