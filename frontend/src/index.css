@@ -1,14 +1,217 @@
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(176, 122, 68, 0.22), transparent 26%),
-    radial-gradient(circle at 85% 10%, rgba(217, 195, 161, 0.08), transparent 20%),
-    linear-gradient(180deg, #171210 0%, #0f0c0a 100%);
-  color: #f3eadc;
+@import 'tailwindcss';
+
+/*
+ * Design tokens for the Tailwind redesign. Colors keep the original warm,
+ * candle-lit palette; type pairs an editorial serif with a clean sans.
+ * Pages still on Material UI read the same values through common/theme.js.
+ */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --font-brand: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink-950: #0e0b09;
+  --color-ink-900: #15110e;
+  --color-ink-800: #1d1814;
+  --color-ink-700: #2a231d;
+  --color-ink-600: #3a3029;
+  --color-cream: #f3eadc;
+  --color-muted: #b9ab98;
+  --color-sand: #d9c3a1;
+  --color-sand-light: #ead8bc;
+  --color-brass: #b07a44;
+  --color-brass-bright: #c98d50;
+  --color-line: rgb(217 195 161 / 0.14);
+  --color-line-strong: rgb(217 195 161 / 0.3);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-page-in: page-in 600ms var(--ease-out-soft) both;
+  --animate-fade-in: fade-in 700ms ease both;
+
+  @keyframes page-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 }
 
-#root {
-  min-height: 100vh;
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    background-color: var(--color-ink-950);
+    color: var(--color-cream);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background: rgb(176 122 68 / 0.45);
+  }
+}
+
+@layer components {
+  /* Small uppercase label that sits above page titles. */
+  .eyebrow {
+    @apply font-sans text-xs font-semibold tracking-[0.22em] text-brass-bright uppercase;
+  }
+
+  /* Shared button looks. Pill shaped, 44 px tall for comfortable taps. */
+  .btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-6 text-sm font-semibold tracking-wide transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand;
+  }
+  .btn-primary {
+    @apply bg-sand text-ink-950 hover:bg-sand-light;
+  }
+  .btn-ghost {
+    @apply border border-line-strong text-cream hover:border-sand hover:bg-white/5;
+  }
+
+  /* Card surface for forms and tools. */
+  .panel {
+    @apply rounded-2xl border border-line bg-gradient-to-b from-ink-800/90 to-ink-900/90 p-6 sm:p-8;
+  }
+  .btn:disabled {
+    @apply cursor-not-allowed opacity-45;
+  }
+
+  /* Pill tag used for event type and date. */
+  .tag {
+    @apply inline-flex items-center rounded-full border border-line-strong px-3 py-1 text-xs font-medium tracking-wide text-muted;
+  }
+  .tag-accent {
+    @apply border-transparent bg-brass/20 text-sand-light;
+  }
+
+  /* Thin, warm scrollbar for the app scroller. */
+  .warm-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(217 195 161 / 0.35) transparent;
+  }
+}
+
+/*
+ * Scroll reveal: elements start slightly low and transparent, then settle in.
+ * Only opacity and transform change, so it stays smooth on phones.
+ */
+.reveal {
+  transition:
+    opacity 900ms var(--ease-out-soft),
+    transform 900ms var(--ease-out-soft);
+}
+.reveal[data-reveal='hidden'] {
+  opacity: 0;
+  transform: translateY(28px);
+}
+/* Image variant: a soft zoom-out as the photo arrives. */
+.reveal-zoom img,
+.reveal-zoom [data-zoom] {
+  transition: transform 1600ms var(--ease-out-soft);
+}
+.reveal-zoom[data-reveal='hidden'] img,
+.reveal-zoom[data-reveal='hidden'] [data-zoom] {
+  transform: scale(1.12);
+}
+
+/* Slow drift on the home slideshow photos. */
+@keyframes ken-burns {
+  from { transform: scale(1.04) translate3d(0, 0, 0); }
+  to { transform: scale(1.14) translate3d(-1.5%, -1%, 0); }
+}
+.ken-burns {
+  animation: ken-burns 16s ease-out infinite alternate;
+  will-change: transform;
+}
+
+/*
+ * Scroll-linked hero: the photos drift slower than the page and the copy fades
+ * as you scroll away. Browsers without scroll timelines just skip it.
+ */
+@supports (animation-timeline: scroll()) {
+  /*
+   * Named timeline on the app scroller. The hero sits inside overflow-hidden boxes,
+   * which would otherwise become the "nearest" scroller and never move.
+   */
+  .warm-scrollbar {
+    scroll-timeline: --page y;
+  }
+  @keyframes hero-parallax {
+    to { transform: translate3d(0, 22%, 0); }
+  }
+  @keyframes hero-copy-out {
+    to { opacity: 0; transform: translate3d(0, -40px, 0); }
+  }
+  .hero-parallax {
+    animation: hero-parallax linear both;
+    animation-timeline: --page;
+    animation-range: 0 100vh;
+  }
+  .hero-copy-out {
+    animation: hero-copy-out linear both;
+    animation-timeline: --page;
+    animation-range: 0 70vh;
+  }
+}
+
+/* Respect reduced-motion: no page or image animations. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal[data-reveal='hidden'] {
+    opacity: 1;
+    transform: none;
+  }
+  .ken-burns,
+  .hero-parallax,
+  .hero-copy-out {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/* Line that drips down the hero's scroll hint. */
+@keyframes scroll-cue {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(200%); }
+}
+.scroll-cue {
+  animation: scroll-cue 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue { animation: none !important; }
+}
+
+/* Confirmation badge: pops in, then the check mark draws itself. */
+@keyframes confirm-pop {
+  0% { opacity: 0; transform: scale(0.5); }
+  65% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes confirm-check {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+.confirm-pop {
+  animation: confirm-pop 480ms var(--ease-out-soft) both;
+}
+.confirm-check {
+  stroke-dasharray: 24;
+  animation: confirm-check 420ms 260ms ease-out both;
 }

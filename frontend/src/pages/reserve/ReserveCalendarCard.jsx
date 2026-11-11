@@ -1,6 +1,36 @@
-import { Box, Button, CircularProgress, Paper, Stack, Typography } from '@mui/material';
-import SurfaceCard from '../../common/SurfaceCard';
+import Spinner from '../../common/Spinner';
+import { ArrowLeftIcon, ArrowRightIcon } from '../../common/icons';
 import { formatDateKey, formatHumanDate, isPastDate, isValidDateValue, weekdays } from './reserve';
+
+/**
+ * Picks the look of one calendar day from its state. Selected wins, then past,
+ * then bookable; days outside the shown month are dimmed.
+ */
+function dayClass({ isSelected, isPast, isBookable, isCurrentMonth }) {
+  const base = 'group relative flex h-16 min-w-0 flex-col justify-between rounded-xl border p-1.5 text-left transition-all duration-200 sm:h-20 sm:p-2.5 md:h-24';
+  if (isSelected) {
+    return `${base} border-sand bg-sand text-ink-950 shadow-lg shadow-sand/10`;
+  }
+  if (isPast) {
+    return `${base} cursor-default border-transparent bg-white/[0.015] text-muted opacity-35`;
+  }
+  let monthClass = '';
+  if (!isCurrentMonth) monthClass = 'opacity-45';
+  if (isBookable) {
+    return `${base} ${monthClass} border-brass/45 bg-brass/15 text-cream hover:-translate-y-0.5 hover:border-brass-bright hover:bg-brass/25`;
+  }
+  return `${base} ${monthClass} border-line bg-white/[0.02] text-cream/80 hover:-translate-y-0.5 hover:border-line-strong hover:bg-white/[0.05]`;
+}
+
+/**
+ * Picks the dot style for one seating: filled when it can still be booked, hollow when taken.
+ */
+function seatingDotClass(isOpen, isSelectedDay) {
+  if (isOpen && isSelectedDay) return 'bg-ink-950';
+  if (isOpen) return 'bg-brass-bright';
+  if (isSelectedDay) return 'border border-ink-950/50';
+  return 'border border-brass/50';
+}
 
 /**
  * Renders the interactive month view used to browse open reservation nights.
@@ -19,215 +49,98 @@ function ReserveCalendarCard({
   selectedDate,
   today,
 }) {
-  return (
-    <SurfaceCard cardSx={{ height: '100%' }} contentSx={{ p: { xs: 2, sm: 3 } }}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ xs: 'flex-start', sm: 'center' }}
-        spacing={2}
-        sx={{ mb: 2 }}
-      >
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>
-            Calendar
-          </Typography>
-          <Typography color="text.secondary">
-            Find an open slot and reserve in Guest Reservation box.
-          </Typography>
-        </Box>
-      </Stack>
+  const shownMonth = isValidDateValue(currentMonth) ? currentMonth : new Date();
+  const monthLabel = shownMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  const monthButtonClass = 'grid size-11 place-items-center rounded-full border border-line-strong text-cream transition-colors hover:border-sand hover:bg-white/5';
 
-      <Box
-        sx={{
-          mb: 2,
-          width: '100%',
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)',
-          alignItems: 'center',
-          columnGap: 1.5,
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
-          <Button
-            variant="outlined"
-            onClick={() => onMonthChange(-1)}
-            sx={{ minWidth: { xs: 104, sm: 112 } }}
-          >
-            Previous
-          </Button>
-        </Box>
-        <Typography
-          variant="h6"
-          sx={{ flexShrink: 0, minWidth: 'fit-content', textAlign: 'center', fontWeight: 700 }}
-        >
-          {(isValidDateValue(currentMonth) ? currentMonth : new Date()).toLocaleDateString(undefined, {
-            month: 'long',
-            year: 'numeric',
-          })}
-        </Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button
-            variant="outlined"
-            onClick={() => onMonthChange(1)}
-            sx={{ minWidth: { xs: 104, sm: 112 } }}
-          >
-            Next
-          </Button>
-        </Box>
-      </Box>
+  return (
+    <section className="panel grid gap-6 p-4 sm:p-6 md:p-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="grid gap-1">
+          <h2 className="font-display text-2xl tracking-tight">Calendar</h2>
+          <p className="text-sm text-muted">Pick a highlighted night, then choose a seating.</p>
+        </div>
+        <div className="flex items-center gap-4 text-xs text-muted">
+          <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-brass-bright" />Open seating</span>
+          <span className="flex items-center gap-1.5"><span className="size-2 rounded-full border border-brass/60" />Taken</span>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <button type="button" aria-label="Previous" onClick={() => onMonthChange(-1)} className={monthButtonClass}>
+          <ArrowLeftIcon className="size-4" />
+        </button>
+        {/* Kept as an h6: the end-to-end tests find the month label by this tag. */}
+        <h6 className="font-display text-xl tracking-tight text-cream">{monthLabel}</h6>
+        <button type="button" aria-label="Next" onClick={() => onMonthChange(1)} className={monthButtonClass}>
+          <ArrowRightIcon className="size-4" />
+        </button>
+      </div>
 
       {loadingDashboard ? (
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ py: 6 }}>
-          <CircularProgress size={20} />
-          <Typography color="text.secondary">Loading reserve calendar...</Typography>
-        </Stack>
+        <div className="py-10">
+          <Spinner label="Loading reserve calendar..." />
+        </div>
       ) : (
-        <Box sx={{ pb: 1 }}>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-              gap: { xs: 0.5, sm: 1 },
-              alignItems: 'stretch',
-              width: '100%',
-            }}
-          >
-            {weekdays.map((weekday) => (
-              <Typography
-                key={weekday}
-                variant="caption"
-                sx={{ px: 1, py: 0.75, textAlign: 'center', fontWeight: 700, color: 'text.secondary' }}
+        <div className="grid grid-cols-7 gap-1 sm:gap-2">
+          {weekdays.map((weekday) => (
+            <span key={weekday} className="pb-1 text-center text-[11px] font-semibold tracking-[0.15em] text-muted uppercase">
+              {weekday}
+            </span>
+          ))}
+          {calendarDays.map((day) => {
+            const dateKey = formatDateKey(day);
+            const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
+            const isSelected = dateKey === selectedDate;
+            const hasVisibleAvailability = availableDateSet.has(dateKey);
+            const isBookable = bookableDateSet.has(dateKey);
+            const dinnerTimes = availabilityByDate[dateKey]?.map((item) => item.dinner_time).filter(Boolean) || [];
+            const bookableDinnerTimeSet = new Set(
+              bookableAvailabilityByDate[dateKey]?.map((item) => item.dinner_time).filter(Boolean) || [],
+            );
+            const reservedDinnerTimeSet = new Set(reservationsByDate[dateKey]?.map((reservation) => reservation.time) || []);
+            // Open seatings first so the dots read "available" at a glance; cap at five to fit small cells.
+            const prioritizedDinnerTimes = [
+              ...dinnerTimes.filter((time) => bookableDinnerTimeSet.has(time)),
+              ...dinnerTimes.filter((time) => !bookableDinnerTimeSet.has(time)),
+            ].slice(0, 5);
+            const isPast = isPastDate(dateKey, today);
+            const showDots = hasVisibleAvailability && prioritizedDinnerTimes.length > 0 && !isPast;
+
+            return (
+              <button
+                key={dateKey}
+                type="button"
+                aria-label={formatHumanDate(dateKey)}
+                aria-pressed={isSelected}
+                disabled={isPast}
+                onClick={() => {
+                  if (!isPast) {
+                    onDaySelect(dateKey);
+                  }
+                }}
+                className={dayClass({ isSelected, isPast, isBookable, isCurrentMonth })}
               >
-                {weekday}
-              </Typography>
-            ))}
-            {calendarDays.map((day) => {
-              const dateKey = formatDateKey(day);
-              const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
-              const isSelected = dateKey === selectedDate;
-              const hasVisibleAvailability = availableDateSet.has(dateKey);
-              const isBookable = bookableDateSet.has(dateKey);
-              const dinnerTimes = availabilityByDate[dateKey]?.map((item) => item.dinner_time).filter(Boolean) || [];
-              const bookableDinnerTimeSet = new Set(
-                bookableAvailabilityByDate[dateKey]?.map((item) => item.dinner_time).filter(Boolean) || [],
-              );
-              const reservedDinnerTimeSet = new Set(reservationsByDate[dateKey]?.map((reservation) => reservation.time) || []);
-              const prioritizedDinnerTimes = [
-                ...dinnerTimes.filter((time) => bookableDinnerTimeSet.has(time)),
-                ...dinnerTimes.filter((time) => !bookableDinnerTimeSet.has(time)),
-              ].slice(0, 5);
-              const isPast = isPastDate(dateKey, today);
-              const isClickable = !isPast;
-
-              return (
-                <Paper
-                  key={dateKey}
-                  component="button"
-                  type="button"
-                  aria-label={formatHumanDate(dateKey)}
-                  disabled={!isClickable}
-                  onClick={() => {
-                    if (isClickable) {
-                      onDaySelect(dateKey);
-                    }
-                  }}
-                  elevation={0}
-                  sx={{
-                    minWidth: 0,
-                    height: { xs: 64, sm: 82, md: 96 },
-                    p: { xs: 0.5, sm: 0.85, md: 1.1 },
-                    border: '1px solid',
-                    borderColor: isSelected ? 'rgba(255, 255, 255, 0.88)' : 'rgba(217, 195, 161, 0.15)',
-                    backgroundColor: isPast
-                      ? 'rgba(255, 255, 255, 0.015)'
-                      : isSelected
-                      ? 'rgba(255, 255, 255, 0.09)'
-                      : isBookable
-                        ? 'rgba(176, 122, 68, 0.16)'
-                      : 'rgba(255, 255, 255, 0.02)',
-                    textAlign: 'left',
-                    borderRadius: 0,
-                    opacity: isPast ? 0.3 : isCurrentMonth ? 1 : 0.45,
-                    transition: 'all 160ms ease',
-                    cursor: isClickable ? 'pointer' : 'default',
-                    '&:hover': {
-                      transform: isClickable ? 'translateY(-2px)' : 'none',
-                      backgroundColor: !isClickable
-                        ? undefined
-                        : isSelected
-                          ? 'rgba(255, 255, 255, 0.12)'
-                          : isBookable
-                            ? 'rgba(176, 122, 68, 0.12)'
-                            : 'rgba(255, 255, 255, 0.05)',
-                      borderColor: !isClickable
-                        ? 'rgba(217, 195, 161, 0.15)'
-                        : isSelected
-                          ? 'rgba(255, 255, 255, 0.95)'
-                          : isBookable
-                            ? 'secondary.main'
-                            : 'rgba(217, 195, 161, 0.28)',
-                      boxShadow: isClickable ? '0 10px 22px rgba(0, 0, 0, 0.22)' : 'none',
-                    },
-                    '&:disabled': {
-                      color: 'text.secondary',
-                    },
-                  }}
-                >
-                  <Stack spacing={{ xs: 0.5, sm: 0.9 }}>
-                    <Typography
-                      sx={{
-                        fontWeight: 700,
-                        fontSize: { xs: '0.9rem', sm: '1rem' },
-                        color: isSelected ? 'common.white' : undefined,
-                      }}
-                    >
-                      {day.getDate()}
-                    </Typography>
-                    {hasVisibleAvailability && prioritizedDinnerTimes.length && !isPast ? (
-                      <Stack
-                        direction="row"
-                        alignItems="center"
-                        spacing={0.5}
-                        sx={{
-                          pointerEvents: 'none',
-                          flexWrap: 'wrap',
-                          minHeight: { xs: 12, sm: 14 },
-                        }}
-                      >
-                        {prioritizedDinnerTimes.map((time, index) => {
-                          const isReservedTime = reservedDinnerTimeSet.has(time);
-                          const isBookableTime = bookableDinnerTimeSet.has(time);
-
-                          return (
-                            <Box
-                              key={`${dateKey}-${time}-${index}`}
-                              sx={{
-                                width: { xs: 7, sm: 8 },
-                                height: { xs: 7, sm: 8 },
-                                borderRadius: '50%',
-                                backgroundColor: isReservedTime || !isBookableTime
-                                  ? 'transparent'
-                                  : 'rgba(214, 166, 90, 0.98)',
-                                border: isReservedTime || !isBookableTime
-                                  ? '1px solid rgba(214, 166, 90, 0.45)'
-                                  : '1px solid rgba(255, 241, 214, 0.45)',
-                                boxShadow:
-                                  isReservedTime || !isBookableTime ? 'none' : '0 0 0 1px rgba(0, 0, 0, 0.18)',
-                              }}
-                            />
-                          );
-                        })}
-                      </Stack>
-                    ) : null}
-                  </Stack>
-                </Paper>
-              );
-            })}
-          </Box>
-        </Box>
+                <span className="text-sm font-semibold sm:text-base">{day.getDate()}</span>
+                {showDots ? (
+                  <span className="pointer-events-none flex flex-wrap gap-1">
+                    {prioritizedDinnerTimes.map((time, index) => {
+                      const isOpen = !reservedDinnerTimeSet.has(time) && bookableDinnerTimeSet.has(time);
+                      return (
+                        <span
+                          key={`${dateKey}-${time}-${index}`}
+                          className={`size-1.5 rounded-full sm:size-2 ${seatingDotClass(isOpen, isSelected)}`}
+                        />
+                      );
+                    })}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
       )}
-    </SurfaceCard>
+    </section>
   );
 }
 

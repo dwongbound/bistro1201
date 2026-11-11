@@ -1,31 +1,17 @@
-import { Box, Typography } from '@mui/material';
-
 /**
- * Renders the shared page header treatment used across marketing and utility screens.
+ * Renders the shared page header: a small eyebrow label, a serif title, and an optional lead paragraph.
  */
-function PageIntro({ eyebrow, title, description, titleProps, descriptionProps, sx }) {
-  const { sx: titleSx, ...restTitleProps } = titleProps || {};
-  const { sx: descSx, ...restDescProps } = descriptionProps || {};
+function PageIntro({ eyebrow, title, description, className = '' }) {
   return (
-    <Box sx={{ display: 'grid', gap: 1, ...sx }}>
-      {eyebrow ? (
-        <Typography variant="overline" color="secondary.main">
-          {eyebrow}
-        </Typography>
-      ) : null}
-      <Typography variant="h3" sx={{ fontWeight: 800, ...titleSx }} {...restTitleProps}>
+    <header className={`grid max-w-3xl gap-4 ${className}`}>
+      {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
+      <h1 className="font-display text-4xl leading-[1.05] font-normal tracking-tight text-cream sm:text-5xl md:text-6xl">
         {title}
-      </Typography>
+      </h1>
       {description ? (
-        <Typography
-          color="text.secondary"
-          sx={{ maxWidth: 760, lineHeight: 1.8, ...descSx }}
-          {...restDescProps}
-        >
-          {description}
-        </Typography>
+        <p className="max-w-2xl text-base leading-relaxed text-muted sm:text-lg">{description}</p>
       ) : null}
-    </Box>
+    </header>
   );
 }
 

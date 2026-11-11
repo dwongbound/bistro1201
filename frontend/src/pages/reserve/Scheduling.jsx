@@ -1,9 +1,11 @@
-import { Alert, Box, Button, Grid, Stack, useMediaQuery } from '@mui/material';
+import { useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useEffect, useMemo, useState } from 'react';
 import { createApiFetch } from '../../common/apiClient';
 import { getApiUrl } from '../../common/appConfig';
+import Notice from '../../common/Notice';
 import PageIntro from '../../common/PageIntro';
+import Reveal from '../../common/Reveal';
 import {
   clearGuestAccessCode,
   clearStaffAccessCode,
@@ -776,48 +778,51 @@ function Scheduling() {
   };
 
   if (!auth.token) {
+    // Note: this heading must differ from the signed-in one; e2e waits on whichever shows.
     return (
-      <Box sx={{ display: 'grid', gap: 4 }}>
-        <WaitlistForm apiUrl={apiUrl} />
-        <ReserveAccessGate
-          accessCode={accessCode}
-          authBusy={authBusy}
-          authStatus={authStatus}
-          onAccessCodeChange={(event) => setAccessCode(event.target.value)}
-          onSubmit={handleGuestAccessSubmit}
+      <div className="grid gap-10 md:gap-14">
+        <PageIntro
+          eyebrow="Reservations"
+          title="Enter an Access Code"
+          description="Dinners at 1201 are by invitation. Enter the code from your host to see open nights and book a seat, or join the waitlist and we will reach out."
         />
-      </Box>
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+          <Reveal>
+            <ReserveAccessGate
+              accessCode={accessCode}
+              authBusy={authBusy}
+              authStatus={authStatus}
+              onAccessCodeChange={(event) => setAccessCode(event.target.value)}
+              onSubmit={handleGuestAccessSubmit}
+            />
+          </Reveal>
+          <Reveal delay={120}>
+            <WaitlistForm apiUrl={apiUrl} />
+          </Reveal>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Box sx={{ display: 'grid', gap: 4 }}>
+    <div className="grid gap-8 md:gap-12">
       <PageIntro
         eyebrow="Reservations"
         title="Reserve an Evening"
-        description="This webpage is kept up to date with the latest open availabilities."
-        titleProps={{ sx: { maxWidth: 760 } }}
-        descriptionProps={{ sx: { maxWidth: 760 } }}
+        description="Open nights appear here as soon as they are posted. Pick a highlighted date, choose a seating, and you are set."
       />
 
       {authStatus.message ? (
-        <Alert severity={authStatus.type === 'error' ? 'error' : 'success'}>
-          {authStatus.message}
-        </Alert>
+        <Notice tone={authStatus.type === 'error' ? 'error' : 'success'}>{authStatus.message}</Notice>
       ) : null}
 
       {status.message ? (
-        <Alert
-          severity={status.type === 'error' ? 'error' : 'success'}
-          role={status.type === 'error' ? 'alert' : 'status'}
-        >
-          {status.message}
-        </Alert>
+        <Notice tone={status.type === 'error' ? 'error' : 'success'}>{status.message}</Notice>
       ) : null}
 
-      <Grid container spacing={3}>
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         {!isMobile ? (
-          <Grid size={{ xs: 12, lg: 7 }}>
+          <Reveal>
             <ReserveCalendarCard
               availableDateSet={visibleAvailableDateSet}
               availabilityByDate={availabilityByDate}
@@ -833,11 +838,10 @@ function Scheduling() {
               selectedDate={selectedDate}
               today={today}
             />
-          </Grid>
+          </Reveal>
         ) : null}
 
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <Stack spacing={3}>
+        <Reveal delay={120} className="grid gap-6">
             <GuestReservationCard
               availableDateSet={guestBookableDateSet}
               bookableDinnerTimes={bookableDinnerTimes}
@@ -874,15 +878,14 @@ function Scheduling() {
               staffBusy={staffBusy}
               staffStatus={staffStatus}
             />
-          </Stack>
-        </Grid>
-      </Grid>
+        </Reveal>
+      </div>
       <ReservationConfirmationDialog
         confirmationDialog={confirmationDialog}
         onClose={() => setConfirmationDialog((current) => ({ ...current, open: false }))}
         onExited={() => setConfirmationDialog({ open: false, title: '', message: '' })}
       />
-    </Box>
+    </div>
   );
 }
 

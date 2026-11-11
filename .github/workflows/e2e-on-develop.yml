@@ -25,6 +25,10 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          # workflow_run checks out the default branch (main) unless told otherwise,
+          # so pin it to the develop commit whose Checks run triggered this.
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Reset isolated E2E stack
         run: docker compose --env-file env/test.env --profile test down -v || true
