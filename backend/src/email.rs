@@ -44,7 +44,7 @@ pub(crate) async fn send_confirmation_email(
     let mut email_builder = Message::builder()
         .from(email_config.from.clone())
         .to(to)
-        .subject("Your 1201 Bistro reservation is confirmed");
+        .subject("Your 1201 reservation is confirmed");
 
     if let Some(reply_to) = email_config.reply_to.clone() {
         email_builder = email_builder.reply_to(reply_to);
@@ -86,7 +86,7 @@ pub(crate) async fn send_cancellation_email(
     let mut email_builder = Message::builder()
         .from(email_config.from.clone())
         .to(to)
-        .subject("Your 1201 Bistro reservation has been cancelled");
+        .subject("Your 1201 reservation has been cancelled");
 
     if let Some(reply_to) = email_config.reply_to.clone() {
         email_builder = email_builder.reply_to(reply_to);
@@ -185,7 +185,7 @@ pub(crate) async fn send_waitlist_contact_email(
     let mut email_builder = Message::builder()
         .from(email_config.from.clone())
         .to(to)
-        .subject("You're off the 1201 Bistro waitlist");
+        .subject("You're off the 1201 waitlist");
 
     if let Some(reply_to) = email_config.reply_to.clone() {
         email_builder = email_builder.reply_to(reply_to);
@@ -270,7 +270,7 @@ pub(crate) fn load_email_config() -> std::result::Result<Option<EmailConfig>, Ap
     };
     let from_address = env::var("SMTP_FROM_ADDRESS")
         .map_err(|_| ApiError::internal("SMTP_FROM_ADDRESS is required when SMTP_HOST is set"))?;
-    let from_name = env::var("SMTP_FROM_NAME").unwrap_or_else(|_| "1201 Bistro".to_string());
+    let from_name = env::var("SMTP_FROM_NAME").unwrap_or_else(|_| "1201".to_string());
     let reply_to_address = env::var("SMTP_REPLY_TO_ADDRESS").ok();
     let reply_to_name = env::var("SMTP_REPLY_TO_NAME").ok();
     let port: u16 = env::var("SMTP_PORT")

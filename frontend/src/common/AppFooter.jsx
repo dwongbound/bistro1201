@@ -15,7 +15,7 @@ function AppFooter() {
           <Link to="/" className="text-sm text-sand-light">
             <BrandWordmark />
           </Link>
-          <span className="text-xs text-muted/70">© {new Date().getFullYear()} 1201 Bistro · Dinner by reservation</span>
+          <span className="text-xs text-muted/70">© {new Date().getFullYear()} 1201</span>
         </div>
         <nav aria-label="Footer" className="-mx-2 flex flex-wrap text-sm text-muted">
           {navItems.map((item) => (

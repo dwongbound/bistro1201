@@ -1,6 +1,6 @@
-# 1201 Bistro Website
+# 1201 Website
 
-A full-stack restaurant site for 1201 Bistro with a React frontend, a Rust
+A full-stack restaurant site for 1201 with a React frontend, a Rust
 backend, and `nginx` serving the production-style app entrypoint. This was mostly vibe coded with my prior full stack knowledge and good patterns, thank you technology.
 
 ## Contents
@@ -550,9 +550,9 @@ Use this env configuration:
 ```env
 POSTMARK_SERVER_TOKEN=pm_server_token_here
 SMTP_FROM_ADDRESS=reservations@1201bistrocafe.com
-SMTP_FROM_NAME=1201 Bistro
+SMTP_FROM_NAME=1201
 SMTP_REPLY_TO_ADDRESS=reservations@1201bistrocafe.com
-SMTP_REPLY_TO_NAME=1201 Bistro Reservations
+SMTP_REPLY_TO_NAME=1201 Reservations
 ```
 
 With `POSTMARK_SERVER_TOKEN` set, you do not need to manually set

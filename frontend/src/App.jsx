@@ -159,7 +159,7 @@ function AppShell() {
         className="relative z-30 border-b border-line bg-ink-950/70 backdrop-blur-md"
       >
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-5 sm:px-8">
-          <NavLink to="/" aria-label="1201 Bistro home" className="text-lg text-sand-light sm:text-xl">
+          <NavLink to="/" aria-label="1201 home" className="text-lg text-sand-light sm:text-xl">
             <BrandWordmark />
           </NavLink>
           <nav aria-label="Primary" className="hidden items-center gap-8 md:flex">

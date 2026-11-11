@@ -31,7 +31,7 @@ function About() {
       <div className="grid gap-12 md:grid-cols-[1.1fr_1fr] md:gap-16">
         <Reveal className="grid content-start gap-6 text-lg leading-relaxed text-cream/85">
           <p className="font-display text-2xl leading-snug text-cream sm:text-3xl">
-            1201 Bistro was started in 2022 by two college roommates living in downtown Los Angeles, with a
+            1201 was started in 2022 by two college roommates living in downtown Los Angeles, with a
             desire to fellowship with friends and cook great food.
           </p>
           <p>Dinner one was a simple steak dinner with duck fat fries and an arugula salad.</p>
@@ -59,7 +59,7 @@ function About() {
         <Reveal delay={150} className="reveal-zoom md:sticky md:top-8 md:self-start">
           <FadeInImage
             src={photoFile('about_page_steak.jpg')}
-            alt="Sliced steak plated at a 1201 Bistro dinner"
+            alt="Sliced steak plated at a 1201 dinner"
             className="aspect-[4/5] w-full rounded-2xl"
           />
         </Reveal>
