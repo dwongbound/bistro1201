@@ -81,6 +81,14 @@
     @apply border border-line-strong text-cream hover:border-sand hover:bg-white/5;
   }
 
+  /* Card surface for forms and tools. */
+  .panel {
+    @apply rounded-2xl border border-line bg-gradient-to-b from-ink-800/90 to-ink-900/90 p-6 sm:p-8;
+  }
+  .btn:disabled {
+    @apply cursor-not-allowed opacity-45;
+  }
+
   /* Pill tag used for event type and date. */
   .tag {
     @apply inline-flex items-center rounded-full border border-line-strong px-3 py-1 text-xs font-medium tracking-wide text-muted;
@@ -96,12 +104,114 @@
   }
 }
 
+/*
+ * Scroll reveal: elements start slightly low and transparent, then settle in.
+ * Only opacity and transform change, so it stays smooth on phones.
+ */
+.reveal {
+  transition:
+    opacity 900ms var(--ease-out-soft),
+    transform 900ms var(--ease-out-soft);
+}
+.reveal[data-reveal='hidden'] {
+  opacity: 0;
+  transform: translateY(28px);
+}
+/* Image variant: a soft zoom-out as the photo arrives. */
+.reveal-zoom img,
+.reveal-zoom [data-zoom] {
+  transition: transform 1600ms var(--ease-out-soft);
+}
+.reveal-zoom[data-reveal='hidden'] img,
+.reveal-zoom[data-reveal='hidden'] [data-zoom] {
+  transform: scale(1.12);
+}
+
+/* Slow drift on the home slideshow photos. */
+@keyframes ken-burns {
+  from { transform: scale(1.04) translate3d(0, 0, 0); }
+  to { transform: scale(1.14) translate3d(-1.5%, -1%, 0); }
+}
+.ken-burns {
+  animation: ken-burns 16s ease-out infinite alternate;
+  will-change: transform;
+}
+
+/*
+ * Scroll-linked hero: the photos drift slower than the page and the copy fades
+ * as you scroll away. Browsers without scroll timelines just skip it.
+ */
+@supports (animation-timeline: scroll()) {
+  /*
+   * Named timeline on the app scroller. The hero sits inside overflow-hidden boxes,
+   * which would otherwise become the "nearest" scroller and never move.
+   */
+  .warm-scrollbar {
+    scroll-timeline: --page y;
+  }
+  @keyframes hero-parallax {
+    to { transform: translate3d(0, 22%, 0); }
+  }
+  @keyframes hero-copy-out {
+    to { opacity: 0; transform: translate3d(0, -40px, 0); }
+  }
+  .hero-parallax {
+    animation: hero-parallax linear both;
+    animation-timeline: --page;
+    animation-range: 0 100vh;
+  }
+  .hero-copy-out {
+    animation: hero-copy-out linear both;
+    animation-timeline: --page;
+    animation-range: 0 70vh;
+  }
+}
+
 /* Respect reduced-motion: no page or image animations. */
 @media (prefers-reduced-motion: reduce) {
+  .reveal[data-reveal='hidden'] {
+    opacity: 1;
+    transform: none;
+  }
+  .ken-burns,
+  .hero-parallax,
+  .hero-copy-out {
+    animation: none !important;
+  }
   *,
   *::before,
   *::after {
     animation-duration: 1ms !important;
     transition-duration: 1ms !important;
   }
+}
+
+/* Line that drips down the hero's scroll hint. */
+@keyframes scroll-cue {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(200%); }
+}
+.scroll-cue {
+  animation: scroll-cue 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue { animation: none !important; }
+}
+
+/* Confirmation badge: pops in, then the check mark draws itself. */
+@keyframes confirm-pop {
+  0% { opacity: 0; transform: scale(0.5); }
+  65% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes confirm-check {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+.confirm-pop {
+  animation: confirm-pop 480ms var(--ease-out-soft) both;
+}
+.confirm-check {
+  stroke-dasharray: 24;
+  animation: confirm-check 420ms 260ms ease-out both;
 }

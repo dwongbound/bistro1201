@@ -1,6 +1,7 @@
-import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
 import { useState } from 'react';
-import SurfaceCard from '../../common/SurfaceCard';
+import FormField from '../../common/FormField';
+import Notice from '../../common/Notice';
+import { ButtonSpinner } from '../../common/Spinner';
 import { useFormErrors } from '../../common/useFormErrors';
 import { submitWaitlistEntry } from './waitlistApi';
 
@@ -63,81 +64,31 @@ function WaitlistForm({ apiUrl }) {
   };
 
   return (
-    <SurfaceCard contentSx={{ p: { xs: 3, sm: 4 } }}>
-      <Stack component="form" onSubmit={handleSubmit} spacing={3} noValidate>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
-            Join the Waitlist
-          </Typography>
-          <Typography sx={{ color: 'text.secondary', lineHeight: 1.8 }}>
-            Add yourself to the waitlist and we'll send you an
-            email when a spot opens up!
-          </Typography>
-          <Typography sx={{ color: 'text.secondary', lineHeight: 1.8, fontStyle: 'italic' }}>
-            Have a code? Enter it in the section below.
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-          <TextField
-            label="First Name"
-            name="first_name"
-            value={form.first_name}
-            onChange={handleChange}
-            error={Boolean(errors.first_name)}
-            helperText={errors.first_name}
-            fullWidth
-          />
-          <TextField
-            label="Last Name"
-            name="last_name"
-            value={form.last_name}
-            onChange={handleChange}
-            error={Boolean(errors.last_name)}
-            helperText={errors.last_name}
-            fullWidth
-          />
-          <TextField
-            label="Email"
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            error={Boolean(errors.email)}
-            helperText={errors.email}
-            fullWidth
-          />
-          <TextField
-            label="Phone Number"
-            name="phone"
-            type="tel"
-            value={form.phone}
-            onChange={handleChange}
-            error={Boolean(errors.phone)}
-            helperText={errors.phone}
-            fullWidth
-          />
-        </Box>
-        <TextField
-          label="Anything else we should know?"
-          name="notes"
-          value={form.notes}
-          onChange={handleChange}
-          multiline
-          rows={3}
-          fullWidth
-        />
-        <Box>
-          <Button type="submit" variant="contained" size="large" disabled={busy}>
-            Join the Waitlist
-          </Button>
-        </Box>
-        {status.message ? (
-          <Alert severity={status.type === 'error' ? 'error' : 'success'}>
-            {status.message}
-          </Alert>
-        ) : null}
-      </Stack>
-    </SurfaceCard>
+    <form onSubmit={handleSubmit} noValidate className="panel grid content-start gap-6">
+      <div className="grid gap-2">
+        <p className="eyebrow">No code yet?</p>
+        <h2 className="font-display text-2xl tracking-tight sm:text-3xl">Join the Waitlist</h2>
+        <p className="leading-relaxed text-muted">
+          Add yourself to the waitlist and we&apos;ll send you an email when a spot opens up.
+        </p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField label="First Name" name="first_name" autoComplete="given-name" value={form.first_name} onChange={handleChange} invalid={Boolean(errors.first_name)} />
+        <FormField label="Last Name" name="last_name" autoComplete="family-name" value={form.last_name} onChange={handleChange} invalid={Boolean(errors.last_name)} />
+        <FormField label="Email" name="email" type="email" autoComplete="email" value={form.email} onChange={handleChange} invalid={Boolean(errors.email)} />
+        <FormField label="Phone Number" name="phone" type="tel" autoComplete="tel" value={form.phone} onChange={handleChange} invalid={Boolean(errors.phone)} />
+      </div>
+      <FormField label="Anything else we should know?" name="notes" multiline rows={3} value={form.notes} onChange={handleChange} />
+      <button type="submit" disabled={busy} className="btn btn-ghost w-full sm:w-fit">
+        {busy ? <ButtonSpinner /> : null}
+        Join the Waitlist
+      </button>
+      {status.message ? (
+        <Notice tone={status.type === 'error' ? 'error' : 'success'} role="alert">
+          {status.message}
+        </Notice>
+      ) : null}
+    </form>
   );
 }
 

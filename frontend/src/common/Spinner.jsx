@@ -10,4 +10,11 @@ function Spinner({ label }) {
   );
 }
 
+/**
+ * Tiny spinner that sits inside a button while its request is running.
+ */
+export function ButtonSpinner() {
+  return <span className="size-4 animate-spin rounded-full border-2 border-current/30 border-t-current" aria-hidden="true" />;
+}
+
 export default Spinner;

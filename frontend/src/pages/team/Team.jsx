@@ -1,6 +1,7 @@
 import BrandWordmark from '../../common/BrandWordmark';
 import FadeInImage from '../../common/FadeInImage';
 import PageIntro from '../../common/PageIntro';
+import Reveal from '../../common/Reveal';
 import { getR2BaseUrl } from '../../common/appConfig';
 
 const r2 = getR2BaseUrl();
@@ -83,8 +84,8 @@ function Team() {
         description="A small team shapes the menu, the room, and the hospitality behind each evening."
       />
       <ul className="grid gap-x-6 gap-y-8 sm:grid-cols-2 sm:gap-y-12 lg:grid-cols-4">
-        {teamMembers.map((member) => (
-          <li key={member.name} className="group grid grid-cols-[6.5rem_1fr] content-start items-start gap-4 sm:grid-cols-1 sm:gap-5">
+        {teamMembers.map((member, index) => (
+          <Reveal as="li" key={member.name} delay={(index % 4) * 90} className="group grid grid-cols-[6.5rem_1fr] content-start items-start gap-4 sm:grid-cols-1 sm:gap-5">
             <FadeInImage
               src={member.image}
               alt={member.imageAlt}
@@ -96,7 +97,7 @@ function Team() {
               <p className="text-sm font-medium text-brass-bright">{member.role.split('\n').join(' · ')}</p>
               <p className="mt-1 text-sm leading-relaxed text-muted">{member.bio}</p>
             </div>
-          </li>
+          </Reveal>
         ))}
       </ul>
     </div>
