@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Notice from '../../common/Notice';
 import PageIntro from '../../common/PageIntro';
+import Reveal from '../../common/Reveal';
 import Spinner from '../../common/Spinner';
 import { ArrowLeftIcon } from '../../common/icons';
 import { fetchGalleryEvent } from './galleryApi';
@@ -99,8 +100,8 @@ function GalleryEventDetail() {
         <Notice>No gallery images have been added to this event yet.</Notice>
       ) : (
         <div className="columns-1 gap-4 sm:columns-2 lg:columns-3">
-          {event.galleryImages.map((image) => (
-            <figure key={`${image.src}-${image.alt}`} className="mb-4 break-inside-avoid overflow-hidden rounded-xl bg-ink-800">
+          {event.galleryImages.map((image, index) => (
+            <Reveal as="figure" key={`${image.src}-${image.alt}`} delay={(index % 3) * 80} className="mb-4 break-inside-avoid overflow-hidden rounded-xl bg-ink-800">
               <img
                 src={image.src}
                 alt={image.alt}
@@ -109,7 +110,7 @@ function GalleryEventDetail() {
                 onLoad={(e) => { e.currentTarget.style.opacity = '1'; }}
                 className="block w-full opacity-0 transition-opacity duration-700"
               />
-            </figure>
+            </Reveal>
           ))}
         </div>
       )}

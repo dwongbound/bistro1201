@@ -1,6 +1,7 @@
 import BrandWordmark from '../../common/BrandWordmark';
 import FadeInImage from '../../common/FadeInImage';
 import PageIntro from '../../common/PageIntro';
+import Reveal from '../../common/Reveal';
 import { getR2BaseUrl } from '../../common/appConfig';
 
 const r2 = getR2BaseUrl();
@@ -28,7 +29,7 @@ function About() {
         }
       />
       <div className="grid gap-12 md:grid-cols-[1.1fr_1fr] md:gap-16">
-        <div className="grid content-start gap-6 text-lg leading-relaxed text-cream/85">
+        <Reveal className="grid content-start gap-6 text-lg leading-relaxed text-cream/85">
           <p className="font-display text-2xl leading-snug text-cream sm:text-3xl">
             1201 Bistro was started in 2022 by two college roommates living in downtown Los Angeles, with a
             desire to fellowship with friends and cook great food.
@@ -54,12 +55,14 @@ function About() {
               </div>
             ))}
           </dl>
-        </div>
-        <FadeInImage
-          src={photoFile('about_page_steak.jpg')}
-          alt="Sliced steak plated at a 1201 Bistro dinner"
-          className="aspect-[4/5] w-full rounded-2xl md:sticky md:top-8 md:self-start"
-        />
+        </Reveal>
+        <Reveal delay={150} className="reveal-zoom md:sticky md:top-8 md:self-start">
+          <FadeInImage
+            src={photoFile('about_page_steak.jpg')}
+            alt="Sliced steak plated at a 1201 Bistro dinner"
+            className="aspect-[4/5] w-full rounded-2xl"
+          />
+        </Reveal>
       </div>
     </div>
   );

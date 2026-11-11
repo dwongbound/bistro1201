@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import FadeInImage from '../../common/FadeInImage';
 import Notice from '../../common/Notice';
 import PageIntro from '../../common/PageIntro';
+import Reveal from '../../common/Reveal';
 import Spinner from '../../common/Spinner';
 import { ArrowRightIcon } from '../../common/icons';
 import { fetchGalleryEvents } from './galleryApi';
@@ -84,7 +85,7 @@ function Gallery() {
             // Alternate the photo side on wide screens so the page has some rhythm.
             const flip = index % 2 === 1;
             return (
-              <li key={event.slug} className="group grid items-center gap-6 md:grid-cols-[1.4fr_1fr] md:gap-12">
+              <Reveal as="li" key={event.slug} className="reveal-zoom group grid items-center gap-6 md:grid-cols-[1.4fr_1fr] md:gap-12">
                 <Link
                   to={eventHref}
                   tabIndex={-1}
@@ -122,7 +123,7 @@ function Gallery() {
                     <ArrowRightIcon className="size-4" />
                   </Link>
                 </div>
-              </li>
+              </Reveal>
             );
           })}
         </ul>

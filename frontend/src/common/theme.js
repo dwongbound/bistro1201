@@ -4,7 +4,7 @@ import { createTheme } from '@mui/material';
  * Single place to adjust the global corner roundness.
  * MUI uses this as the base unit — individual components scale from it.
  */
-export const BORDER_RADIUS = 6;
+export const BORDER_RADIUS = 12;
 
 /**
  * Corner roundness for pill-style chips and listed time buttons.
@@ -94,8 +94,9 @@ export const appTheme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          backgroundImage: 'linear-gradient(180deg, rgba(38, 31, 26, 0.96), rgba(22, 18, 15, 0.98))',
-          border: '1px solid rgba(217, 195, 161, 0.12)',
+          // Matches the Tailwind .panel surface in index.css.
+          backgroundImage: 'linear-gradient(180deg, rgba(29, 24, 20, 0.9), rgba(21, 17, 14, 0.9))',
+          border: '1px solid rgba(217, 195, 161, 0.14)',
           boxShadow: 'none',
         },
       },
@@ -131,6 +132,9 @@ export const appTheme = createTheme({
       styleOverrides: {
         root: {
           color: '#f3eadc',
+          // Same shape and fill as the Tailwind FormField inputs.
+          borderRadius: 12,
+          backgroundColor: 'rgba(14, 11, 9, 0.6)',
           '& .MuiOutlinedInput-notchedOutline': {
             borderColor: 'rgba(217, 195, 161, 0.28)',
           },

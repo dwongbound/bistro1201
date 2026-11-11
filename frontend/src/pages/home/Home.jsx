@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BrandWordmark from '../../common/BrandWordmark';
+import Reveal from '../../common/Reveal';
 import { ArrowRightIcon } from '../../common/icons';
 import { fetchGalleryEvent } from '../gallery/galleryApi';
 
@@ -23,6 +24,23 @@ const highlights = [
     copy: 'Soft lighting, crisp pours, and a room designed for date nights, celebrations, and unhurried dinners.',
   },
 ];
+
+/**
+ * Small animated line at the bottom of the hero hinting that the page keeps going.
+ */
+function ScrollCue({ visible }) {
+  return (
+    <div
+      aria-hidden="true"
+      className={`hero-copy-out absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 transition-opacity duration-1000 md:flex ${visible ? 'opacity-100' : 'opacity-0'}`}
+    >
+      <span className="text-[10px] font-semibold tracking-[0.3em] text-muted uppercase">Scroll</span>
+      <span className="relative h-10 w-px overflow-hidden bg-line-strong">
+        <span className="scroll-cue absolute inset-x-0 top-0 h-1/2 bg-sand" />
+      </span>
+    </div>
+  );
+}
 
 /**
  * Shows the landing-page hero over a crossfading photo slideshow, then a short
@@ -107,13 +125,14 @@ function Home() {
     <>
       <section className="relative isolate flex min-h-[calc(100svh-4rem)] items-end overflow-hidden">
         {/* Crossfading slideshow behind the hero copy. */}
-        <div className="absolute inset-0 -z-10 bg-ink-950" aria-hidden="true">
+        <div className="absolute inset-0 -z-10 overflow-hidden bg-ink-950" aria-hidden="true">
+          <div className="hero-parallax absolute inset-0">
           {slides.map((slide, i) => (
             <div
               key={slide.src}
               data-testid={`home-slide-${i}`}
               data-slide-src={slide.src}
-              className="absolute inset-0 scale-105 bg-cover bg-center"
+              className="ken-burns absolute inset-0 bg-cover bg-center"
               style={{
                 backgroundImage: `url(${slide.src})`,
                 opacity: visible && loadedSlides.has(slide.src) && i === currentIndex ? 1 : 0,
@@ -121,11 +140,13 @@ function Home() {
               }}
             />
           ))}
+          </div>
           {/* Darkens the bottom-left corner so the copy always reads, whatever the photo. */}
           <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/60 to-ink-950/20" />
           <div className="absolute inset-0 bg-gradient-to-r from-ink-950/70 via-transparent to-transparent" />
         </div>
 
+        <div className="hero-copy-out w-full">
         <div
           className="mx-auto grid w-full max-w-6xl gap-6 px-5 pt-24 pb-14 sm:px-8 md:pb-24"
           style={{
@@ -154,27 +175,29 @@ function Home() {
             </Link>
           </div>
         </div>
+        </div>
+        <ScrollCue visible={visible} />
       </section>
 
       <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 md:py-28">
         <div className="grid gap-12 md:grid-cols-[1fr_2fr] md:gap-16">
-          <div className="grid content-start gap-4">
+          <Reveal className="grid content-start gap-4">
             <p className="eyebrow">The evening</p>
             <h2 className="font-display text-3xl leading-tight tracking-tight sm:text-4xl">
               Small room, seasonal plates, no rush.
             </h2>
-          </div>
+          </Reveal>
           <ol className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
             {highlights.map((item, index) => (
-              <li key={item.title} className="grid content-start gap-3 bg-ink-950 p-6">
+              <Reveal as="li" key={item.title} delay={index * 120} className="grid content-start gap-3 bg-ink-950 p-6">
                 <span className="font-display text-sm text-brass-bright">0{index + 1}</span>
                 <h3 className="text-base font-semibold text-cream">{item.title}</h3>
                 <p className="text-sm leading-relaxed text-muted">{item.copy}</p>
-              </li>
+              </Reveal>
             ))}
           </ol>
         </div>
-        <div className="mt-16 flex flex-col items-start justify-between gap-6 rounded-2xl border border-line bg-gradient-to-br from-ink-800 to-ink-900 p-8 sm:flex-row sm:items-center md:p-10">
+        <Reveal className="mt-16 flex flex-col items-start justify-between gap-6 rounded-2xl border border-line bg-gradient-to-br from-ink-800 to-ink-900 p-8 sm:flex-row sm:items-center md:p-10">
           <div className="grid gap-2">
             <h2 className="font-display text-2xl tracking-tight sm:text-3xl">Save a seat at the table</h2>
             <p className="text-muted">Openings are posted as soon as the next menu is set.</p>
@@ -183,7 +206,7 @@ function Home() {
             See availability
             <ArrowRightIcon className="size-4" />
           </Link>
-        </div>
+        </Reveal>
       </section>
     </>
   );

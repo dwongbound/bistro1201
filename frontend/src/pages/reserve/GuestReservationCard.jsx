@@ -1,5 +1,4 @@
-import { Button, Chip, Stack, TextField, Typography } from '@mui/material';
-import SurfaceCard from '../../common/SurfaceCard';
+import FormField from '../../common/FormField';
 import { useFormErrors } from '../../common/useFormErrors';
 import StyledDateInput from '../../common/StyledDateInput';
 import { formatHumanDate, formatHumanTime } from './reserve';
@@ -30,12 +29,29 @@ function GuestReservationCard({
     onSubmit(event);
   };
 
+  let timeHint = 'There are no availabilities for this day.';
+  if (bookableDinnerTimes.length && selectedDinnerTime) {
+    timeHint = `Selected time: ${formatHumanTime(selectedDinnerTime)}`;
+  } else if (bookableDinnerTimes.length) {
+    timeHint = 'Select one dinner seating shown for this night.';
+  } else if (nextAvailableSlotLabel) {
+    timeHint = `There are no availabilities for this day. Next available slot is ${nextAvailableSlotLabel}.`;
+  }
+
+  const canSubmit = hasAvailability
+    && Boolean(form.date)
+    && Boolean(form.time)
+    && Boolean(form.name.trim())
+    && Boolean(form.email.trim())
+    && availableDateSet.has(form.date);
+
   return (
-    <SurfaceCard contentSx={{ p: { xs: 2.5, sm: 3 } }}>
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
-        Guest Reservation
-      </Typography>
-      <Stack component="form" onSubmit={handleSubmit} spacing={2.5} noValidate>
+    <section className="panel grid gap-6">
+      <div className="grid gap-1">
+        <p className="eyebrow">Your table</p>
+        <h2 className="font-display text-2xl tracking-tight">Guest Reservation</h2>
+      </div>
+      <form onSubmit={handleSubmit} noValidate className="grid gap-5">
         <StyledDateInput
           id="reservation-date"
           label="Date *"
@@ -46,98 +62,80 @@ function GuestReservationCard({
           disablePast
         />
 
-        <Stack spacing={1}>
-          <Typography component="label" htmlFor="reservation-time" sx={{ fontWeight: 600 }}>
+        <div className="grid gap-3">
+          <label htmlFor="reservation-time" className="text-sm font-medium text-cream/90">
             Time *
-          </Typography>
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ minHeight: 40, alignItems: 'center' }}>
-            {selectedDinnerTimes.length
-              ? selectedDinnerTimes.map((time) => {
-                  const isBookable = bookableDinnerTimes.includes(time);
-                  const isSelected = selectedDinnerTime === time;
+          </label>
+          {selectedDinnerTimes.length ? (
+            <div className="flex flex-wrap gap-2">
+              {selectedDinnerTimes.map((time) => {
+                const isBookable = bookableDinnerTimes.includes(time);
+                const isSelected = selectedDinnerTime === time;
+                const label = formatHumanTime(time);
 
+                if (!isBookable) {
                   return (
-                    <Chip
-                      key={time}
-                      component={isBookable ? 'button' : 'div'}
-                      type={isBookable ? 'button' : undefined}
-                      clickable={isBookable}
-                      label={formatHumanTime(time)}
-                      color={isBookable && isSelected ? 'secondary' : 'default'}
-                      variant={isBookable && isSelected ? 'filled' : 'outlined'}
-                      onClick={isBookable ? () => onTimeSelect(time) : undefined}
-                      sx={{
-                        height: 40,
-                        fontSize: '0.95rem',
-                        opacity: isBookable ? 1 : 0.72,
-                        borderColor: isBookable ? 'rgba(217, 195, 161, 0.35)' : 'rgba(217, 195, 161, 0.2)',
-                        color: isBookable && isSelected ? '#1a130d' : 'text.primary',
-                        '& .MuiChip-label': {
-                          px: 1.5,
-                        },
-                      }}
-                    />
+                    <span key={time} className="inline-flex min-h-11 items-center rounded-full border border-line px-4 text-sm text-muted line-through decoration-muted/60">
+                      {label}
+                    </span>
                   );
-                })
-              : null}
-          </Stack>
-          <Typography color="text.secondary">
-            {bookableDinnerTimes.length
-              ? selectedDinnerTime
-                ? `Selected time: ${formatHumanTime(selectedDinnerTime)}`
-                : 'Select one dinner seating shown for this night.'
-              : nextAvailableSlotLabel
-                ? `There are no availabilities for this day. Next available slot is ${nextAvailableSlotLabel}.`
-                : 'There are no availabilities for this day.'}
-          </Typography>
+                }
+
+                let chipClass = 'border-line-strong text-cream hover:border-sand hover:bg-white/5';
+                if (isSelected) {
+                  chipClass = 'border-sand bg-sand text-ink-950';
+                }
+                return (
+                  <button
+                    key={time}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => onTimeSelect(time)}
+                    className={`inline-flex min-h-11 items-center rounded-full border px-5 text-sm font-semibold transition-colors ${chipClass}`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          <p className="text-sm text-muted">{timeHint}</p>
           <input id="reservation-time" type="hidden" name="time" value={form.time} readOnly />
-        </Stack>
-        <TextField
-          id="reservation-name"
-          label="Name"
-          type="text"
-          name="name"
-          value={form.name}
-          onChange={(event) => {
-            clearError('name');
-            onInputChange(event);
-          }}
-          error={Boolean(errors.name)}
-          helperText={errors.name}
-          fullWidth
-        />
-        <TextField
-          id="reservation-email"
-          label="Email"
-          type="email"
-          name="email"
-          value={form.email}
-          onChange={(event) => {
-            clearError('email');
-            onInputChange(event);
-          }}
-          error={Boolean(errors.email)}
-          helperText={errors.email}
-          fullWidth
-        />
-        <Button
-          type="submit"
-          variant="contained"
-          size="large"
-          disabled={
-            !hasAvailability ||
-            !form.date ||
-            !form.time ||
-            !form.name.trim() ||
-            !form.email.trim() ||
-            !availableDateSet.has(form.date)
-          }
-          fullWidth={isMobile}
-        >
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+          <FormField
+            id="reservation-name"
+            label="Name"
+            type="text"
+            name="name"
+            autoComplete="name"
+            value={form.name}
+            onChange={(event) => {
+              clearError('name');
+              onInputChange(event);
+            }}
+            invalid={Boolean(errors.name)}
+          />
+          <FormField
+            id="reservation-email"
+            label="Email"
+            type="email"
+            name="email"
+            autoComplete="email"
+            value={form.email}
+            onChange={(event) => {
+              clearError('email');
+              onInputChange(event);
+            }}
+            invalid={Boolean(errors.email)}
+          />
+        </div>
+        <button type="submit" disabled={!canSubmit} className={`btn btn-primary ${isMobile ? 'w-full' : 'w-full sm:w-fit'}`}>
           Confirm Reservation
-        </Button>
-      </Stack>
-    </SurfaceCard>
+        </button>
+      </form>
+    </section>
   );
 }
 
