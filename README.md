@@ -467,8 +467,15 @@ GitHub path:
 1. Push feature branches and open pull requests.
 2. Let `CI` validate frontend unit tests, backend tests, and the Playwright E2E suite.
 3. Merge `develop` into `staging` once CI is green.
-4. Merge `staging` into `main` once the promotion path is approved.
-5. Let the `main` push trigger the Fly.io deploy workflow.
+4. That's the last manual step. When the staging push passes the `Checks`
+   tests, its `Promote staging to main` job opens a `staging` -> `main` pull
+   request and merges it with a merge commit.
+5. The same job starts the Fly.io deploy workflow when the backend changed.
+   It has to start it by hand because a merge made with `GITHUB_TOKEN` doesn't
+   fire the deploy's own push trigger.
+
+The promote job needs `Settings` -> `Actions` -> `General` -> "Allow GitHub
+Actions to create and approve pull requests" turned on.
 
 ## Environment Variables
 
